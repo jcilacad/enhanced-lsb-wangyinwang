@@ -1,5 +1,3 @@
-import hashlib
-
 import ncompress
 import numpy as np
 import cv2
@@ -156,32 +154,6 @@ def extract(stego_img_path, position_sequences_path):
     # Save the hidden image in the root directory of the project
     cv2.imwrite('hidden_image.png', hidden_img)
 
-
-def lzw_compress(input_data):
-    dictionary = {bytes([i]): i for i in range(256)}
-    current_data = bytes()
-    compressed_data = []
-
-    for byte in input_data:
-        current_data += bytes([byte])
-        if current_data not in dictionary:
-            compressed_data.append(dictionary[current_data[:-1]])
-            if len(dictionary) <= 2 ** 12:  # Limit dictionary size to avoid excessive memory usage
-                dictionary[current_data] = len(dictionary)
-            current_data = bytes([byte])
-
-    if current_data:
-        compressed_data.append(dictionary[current_data])
-
-    # Convert list of codes into bytes
-    compressed_bytes = bytearray()
-    for code in compressed_data:
-        compressed_bytes += code.to_bytes(2, 'big')  # Use 2 bytes for each code
-
-    # Convert bytes to binary string
-    binary_string = ''.join(format(byte, '08b') for byte in compressed_bytes)
-
-    return binary_string
 
 
 def main():
