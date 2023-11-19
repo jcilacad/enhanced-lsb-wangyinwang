@@ -1,19 +1,22 @@
+import hashlib
+
+import ncompress
 import numpy as np
 import cv2
 import random
 import itertools
 from Crypto.Cipher import AES
+from Crypto.Hash import SHA256
 from Crypto.Util.Padding import pad
 
 
 def embed(carrier_img_path, hidden_img_path, encryption_key):
-
     # Step 1:
     # Read the images
 
     # Remove the conversion of carrier image to grayscale
-    # carrier_img = cv2.imread(carrier_img_path, cv2.IMREAD_GRAYSCALE)
-    carrier_img = cv2.imread(carrier_img_path)
+    # Read the carrier image in color mode
+    carrier_img = cv2.imread(carrier_img_path, cv2.IMREAD_COLOR)
     hidden_img = cv2.imread(hidden_img_path, cv2.IMREAD_GRAYSCALE)
 
     # Ensure the hidden image is not larger than the carrier image
@@ -23,21 +26,36 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
     # Convert the hidden image to a binary stream and encrypt it.
     hidden_img_binary = np.unpackbits(hidden_img)
 
-    # Pad the key to make it 32 bytes long
-    key = pad(encryption_key.encode(), 32)[:32]
+    # Convert hidden_img_binary to bytes for encryption and compression
+    hidden_img_bytes = hidden_img_binary.tobytes()
 
-    # Create a new AES cipher object with the key and AES.MODE_ECB mode
+    # Use SHA-256 to generate a 32-byte key
+    key = SHA256.new(encryption_key.encode()).digest()
+
+    # Create a new AES cipher object with the hashed key
     cipher = AES.new(key, AES.MODE_ECB)
 
-    # Convert numpy array to bytes
-    hidden_img_binary_bytes = hidden_img_binary.tobytes()
-
     # Encrypt the data
-    encrypted_data = cipher.encrypt(pad(hidden_img_binary_bytes, AES.block_size))
+    encrypted_img_bytes = cipher.encrypt(pad(hidden_img_bytes, AES.block_size))
 
-    # Compress the encrypted_data using LZW compression
-    compressed_data = lzw_compress(encrypted_data)
+    # Compress the encrypted bytes
+    compressed_img_bytes = ncompress.compress(encrypted_img_bytes)
 
+    # Convert bytes to binary
+    encrypted_img_bin = ''.join(format(byte, '08b') for byte in encrypted_img_bytes)
+    compressed_img_bin = ''.join(format(byte, '08b') for byte in compressed_img_bytes)
+
+    print("============================ original")
+    # print(hidden_img_binary)
+    print(len(hidden_img_binary))
+
+    print("============================ encrypted")
+    # print(encrypted_img_bin)
+    print(len(encrypted_img_bin))
+
+    print("============================ Compressed")
+    # print(compressed_img_bin)
+    print(len(compressed_img_bin))
 
     # Steps 3 & 4:
     # Generate a list of all pixel coordinates in the carrier image
@@ -48,7 +66,7 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
     random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
 
     # Pixels to embed from hidden image to carrier image
-    sliced_pixel_coords = itertools.islice(random_pixel_coords, len(compressed_data))
+    sliced_pixel_coords = itertools.islice(random_pixel_coords, len(compressed_img_bin))
 
     # Save the position sequences to a txt file
     with open('position_sequences.txt', 'w') as f:
@@ -62,49 +80,49 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
     # Step 6:
     # Embed the hidden image into the carrier image
 
-    # Check the number of color channels in the image
-    if len(carrier_img.shape) == 2:
-        print("The image is 8-bit grayscale.")
-        for bit, pos in zip(compressed_data, itertools.islice(random_pixel_coords, len(compressed_data))):
-            carrier_img[pos] = (carrier_img[pos] & ~1) | bit
+    # Check if the image is grayscale or RGB
+    if carrier_img is not None:
+        if len(carrier_img.shape) == 2 or (
+            len(carrier_img.shape) == 3 and np.all(carrier_img[:, :, 0] == carrier_img[:, :, 1]) and np.all(
+            carrier_img[:, :, 0] == carrier_img[:, :, 2])):
+            print("The image is 8-bit grayscale.")
+            for bit, pos in zip(compressed_img_bin, itertools.islice(random_pixel_coords, len(compressed_img_bin))):
+                carrier_img[pos][0] = (carrier_img[pos][0] & ~1) | int(bit)
 
-        # Save the stego-image
-        cv2.imwrite('stego_image.png', carrier_img)
-    elif len(carrier_img.shape) == 3:
-        print("The image is 24-bit RGB.")
+            # Save the stego-image
+            cv2.imwrite('stego_image.png', carrier_img)
+        elif len(carrier_img.shape) == 3:
 
-        # print(hidden_img_binary_bytes)
-        # print(encrypted_data)
-        # print(compressed_data)
+            print("The image is 24-bit RGB.")
 
-        # Create an iterator for the compressed_data
-        compressed_data_iter = iter(compressed_data)
+            # Create an iterator for the compressed_data
+            compressed_data_iter = iter(compressed_img_bin)
 
-        for pos in itertools.islice(random_pixel_coords, len(compressed_data) // 8):
-            # Get the next 8 bits from compressed_data
-            bits = [next(compressed_data_iter) for _ in range(8)]
+            for pos in itertools.islice(random_pixel_coords, len(compressed_img_bin) // 8):
+                # Get the next 8 bits from compressed_data
+                bits = [next(compressed_data_iter) for _ in range(8)]
 
-            # Split the bits among the color channels
-            red_bits, blue_bits, green_bits = bits[:3], bits[3:5], bits[5:]
+                # Split the bits among the color channels
+                red_bits, blue_bits, green_bits = bits[:3], bits[3:5], bits[5:]
 
-            # Convert the bits to integers
-            red = int(''.join(map(str, red_bits)), 2)
-            blue = int(''.join(map(str, blue_bits)), 2)
-            green = int(''.join(map(str, green_bits)), 2)
+                # Convert the bits to integers
+                red = int(''.join(map(str, red_bits)), 2)
+                blue = int(''.join(map(str, blue_bits)), 2)
+                green = int(''.join(map(str, green_bits)), 2)
 
-            # Embed the bits in the color channels of the image
-            carrier_img[pos] = (carrier_img[pos] & np.array([~7, ~3, ~7])) | np.array([red, blue, green])
+                # Embed the bits in the color channels of the image
+                carrier_img[pos] = (carrier_img[pos] & np.array([~7, ~3, ~7])) | np.array([red, blue, green])
 
-        # Save the stego-image
-        cv2.imwrite('stego_image.png', carrier_img)
+            # Save the stego-image
+            cv2.imwrite('stego_image.png', carrier_img)
+        else:
+            print("The image is neither 8-bit grayscale nor 24-bit RGB.")
+            raise ValueError("The image is neither 8-bit grayscale nor 24-bit RGB.")
     else:
-        print("The image is neither 8-bit grayscale nor 24-bit RGB.")
-        raise ValueError("The image is neither 8-bit grayscale nor 24-bit RGB.")
-
+        print("The image could not be read.")
 
 
 def extract(stego_img_path, position_sequences_path):
-
     # Step 1:
     # Load the stego image and convert it to grayscale
     stego_img = cv2.imread(stego_img_path, cv2.IMREAD_GRAYSCALE)
@@ -139,7 +157,6 @@ def extract(stego_img_path, position_sequences_path):
     cv2.imwrite('hidden_image.png', hidden_img)
 
 
-
 def lzw_compress(input_data):
     dictionary = {bytes([i]): i for i in range(256)}
     current_data = bytes()
@@ -149,7 +166,7 @@ def lzw_compress(input_data):
         current_data += bytes([byte])
         if current_data not in dictionary:
             compressed_data.append(dictionary[current_data[:-1]])
-            if len(dictionary) <= 2**12:  # Limit dictionary size to avoid excessive memory usage
+            if len(dictionary) <= 2 ** 12:  # Limit dictionary size to avoid excessive memory usage
                 dictionary[current_data] = len(dictionary)
             current_data = bytes([byte])
 
@@ -166,6 +183,7 @@ def lzw_compress(input_data):
 
     return binary_string
 
+
 def main():
     operation = input("Choose operation ('embed' or 'extract'): ")
     if operation == 'embed':
@@ -178,6 +196,7 @@ def main():
         position_sequences_path = input("Enter path to position sequences txt file: ")
         encryption_key = input("Enter encryption key: ")
         extract(stego_img_path, position_sequences_path, encryption_key)
+
 
 if __name__ == "__main__":
     main()
