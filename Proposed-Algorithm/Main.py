@@ -4,7 +4,6 @@ import random
 import itertools
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
-from Crypto.Random import get_random_bytes
 
 
 def embed(carrier_img_path, hidden_img_path, encryption_key):
@@ -35,6 +34,10 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
 
     # Encrypt the data
     encrypted_data = cipher.encrypt(pad(hidden_img_binary_bytes, AES.block_size))
+
+    # Compress the encrypted_data using LZW compression
+    compressed_data = lzw_compress(encrypted_data)
+
 
     # Steps 3 & 4:
     # Generate a list of all pixel coordinates in the carrier image
@@ -99,6 +102,31 @@ def extract(stego_img_path, position_sequences_path):
 
     # Save the hidden image in the root directory of the project
     cv2.imwrite('hidden_image.png', hidden_img)
+
+
+
+def lzw_compress(input_data):
+    dictionary = {bytes([i]): i for i in range(256)}
+    current_data = bytes()
+    compressed_data = []
+
+    for byte in input_data:
+        current_data += bytes([byte])
+        if current_data not in dictionary:
+            compressed_data.append(dictionary[current_data[:-1]])
+            if len(dictionary) <= 2**12:  # Limit dictionary size to avoid excessive memory usage
+                dictionary[current_data] = len(dictionary)
+            current_data = bytes([byte])
+
+    if current_data:
+        compressed_data.append(dictionary[current_data])
+
+    # Convert list of codes into bytes
+    compressed_bytes = bytearray()
+    for code in compressed_data:
+        compressed_bytes += code.to_bytes(2, 'big')  # Use 2 bytes for each code
+
+    return bytes(compressed_bytes)
 
 def main():
     operation = input("Choose operation ('embed' or 'extract'): ")
