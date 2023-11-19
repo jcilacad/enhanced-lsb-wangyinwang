@@ -73,6 +73,10 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
     elif len(carrier_img.shape) == 3:
         print("The image is 24-bit RGB.")
 
+        # print(hidden_img_binary_bytes)
+        # print(encrypted_data)
+        # print(compressed_data)
+
         # Create an iterator for the compressed_data
         compressed_data_iter = iter(compressed_data)
 
@@ -157,7 +161,10 @@ def lzw_compress(input_data):
     for code in compressed_data:
         compressed_bytes += code.to_bytes(2, 'big')  # Use 2 bytes for each code
 
-    return bytes(compressed_bytes)
+    # Convert bytes to binary string
+    binary_string = ''.join(format(byte, '08b') for byte in compressed_bytes)
+
+    return binary_string
 
 def main():
     operation = input("Choose operation ('embed' or 'extract'): ")
