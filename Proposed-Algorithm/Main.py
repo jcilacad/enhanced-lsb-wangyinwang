@@ -24,11 +24,11 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
     # Convert the hidden image to a binary stream and encrypt it.
     hidden_img_binary = np.unpackbits(hidden_img)
 
-    # Generate a random 256-bit key
-    key = get_random_bytes(32)
+    # Pad the key to make it 32 bytes long
+    key = pad(encryption_key.encode(), 32)[:32]
 
     # Create a new AES cipher object with the key and AES.MODE_ECB mode
-    cipher = AES.new(encryption_key, AES.MODE_ECB)
+    cipher = AES.new(key, AES.MODE_ECB)
 
     # Convert numpy array to bytes
     hidden_img_binary_bytes = hidden_img_binary.tobytes()
