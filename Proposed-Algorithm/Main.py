@@ -2,8 +2,12 @@ import numpy as np
 import cv2
 import random
 import itertools
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+from Crypto.Random import get_random_bytes
 
-def embed(carrier_img_path, hidden_img_path):
+
+def embed(carrier_img_path, hidden_img_path, encryption_key):
 
     # Step 1:
     # Read the images
@@ -17,8 +21,20 @@ def embed(carrier_img_path, hidden_img_path):
     assert hidden_img.size <= carrier_img.size, "The hidden image is larger than the carrier image"
 
     # Step 2:
-    # Convert the hidden image to a binary stream
+    # Convert the hidden image to a binary stream and encrypt it.
     hidden_img_binary = np.unpackbits(hidden_img)
+
+    # Generate a random 256-bit key
+    key = get_random_bytes(32)
+
+    # Create a new AES cipher object with the key and AES.MODE_ECB mode
+    cipher = AES.new(encryption_key, AES.MODE_ECB)
+
+    # Convert numpy array to bytes
+    hidden_img_binary_bytes = hidden_img_binary.tobytes()
+
+    # Encrypt the data
+    encrypted_data = cipher.encrypt(pad(hidden_img_binary_bytes, AES.block_size))
 
     # Steps 3 & 4:
     # Generate a list of all pixel coordinates in the carrier image
