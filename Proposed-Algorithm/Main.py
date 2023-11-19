@@ -48,7 +48,7 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
     random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
 
     # Pixels to embed from hidden image to carrier image
-    sliced_pixel_coords = itertools.islice(random_pixel_coords, len(hidden_img_binary))
+    sliced_pixel_coords = itertools.islice(random_pixel_coords, len(compressed_data))
 
     # Save the position sequences to a txt file
     with open('position_sequences.txt', 'w') as f:
@@ -61,11 +61,42 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
 
     # Step 6:
     # Embed the hidden image into the carrier image
-    for bit, pos in zip(hidden_img_binary, itertools.islice(random_pixel_coords, len(hidden_img_binary))):
-        carrier_img[pos] = (carrier_img[pos] & ~1) | bit
 
-    # Save the stego-image
-    cv2.imwrite('stego_image.png', carrier_img)
+    # Check the number of color channels in the image
+    if len(carrier_img.shape) == 2:
+        print("The image is 8-bit grayscale.")
+        for bit, pos in zip(compressed_data, itertools.islice(random_pixel_coords, len(compressed_data))):
+            carrier_img[pos] = (carrier_img[pos] & ~1) | bit
+
+        # Save the stego-image
+        cv2.imwrite('stego_image.png', carrier_img)
+    elif len(carrier_img.shape) == 3:
+        print("The image is 24-bit RGB.")
+
+        # Create an iterator for the compressed_data
+        compressed_data_iter = iter(compressed_data)
+
+        for pos in itertools.islice(random_pixel_coords, len(compressed_data) // 8):
+            # Get the next 8 bits from compressed_data
+            bits = [next(compressed_data_iter) for _ in range(8)]
+
+            # Split the bits among the color channels
+            red_bits, blue_bits, green_bits = bits[:3], bits[3:5], bits[5:]
+
+            # Convert the bits to integers
+            red = int(''.join(map(str, red_bits)), 2)
+            blue = int(''.join(map(str, blue_bits)), 2)
+            green = int(''.join(map(str, green_bits)), 2)
+
+            # Embed the bits in the color channels of the image
+            carrier_img[pos] = (carrier_img[pos] & np.array([~7, ~3, ~7])) | np.array([red, blue, green])
+
+        # Save the stego-image
+        cv2.imwrite('stego_image.png', carrier_img)
+    else:
+        print("The image is neither 8-bit grayscale nor 24-bit RGB.")
+        raise ValueError("The image is neither 8-bit grayscale nor 24-bit RGB.")
+
 
 
 def extract(stego_img_path, position_sequences_path):
