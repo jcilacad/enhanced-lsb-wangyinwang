@@ -144,44 +144,52 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
     decrypted_stego_img_bytes = unpad(cipher.decrypt(decompressed_stego_img_bytes), AES.block_size)
 
 
+    # Convert bytes to binary
+    decrypted_img_bin = ''.join(format(byte, '08b') for byte in decrypted_stego_img_bytes)
+    decompressed_img_bin = ''.join(format(byte, '08b') for byte in decompressed_stego_img_bytes)
 
 
+    print("============================ original")
+    # print(stego_img_binary)
+    print(len(stego_img_binary))
 
+    print("============================ Decrypted")
+    # print(decrypted_img_bin)
+    print(len(decrypted_img_bin))
 
+    print("============================ Decompressed")
+    # print(decompressed_img_bin)
+    print(len(decompressed_img_bin))
 
-
-
-
-
-
-    # Step 2:
-    # Load the position sequences from the text file
-    with open(position_sequences_path, 'r') as f:
-        # Read the first line and split it into rows and columns
-        rows, cols = map(int, next(f).strip().split())
-
-        # Read the remaining lines as position sequences
-        position_sequences = [tuple(map(int, line.strip().split())) for line in f]
-        print("Position Sequences", position_sequences)
-
-    # Step 3:
-    # Extract the binary digital stream of the hidden image
-    hidden_img_binary = np.array([stego_img[pos] & 1 for pos in position_sequences])
-
-    # Ensure that the length of hidden_img_binary is a multiple of 8
-    if hidden_img_binary.size % 8 != 0:
-        padding = np.zeros(8 - hidden_img_binary.size % 8, dtype=np.uint8)
-        hidden_img_binary = np.concatenate((hidden_img_binary, padding))
-
-    # Step 4:
-    # Convert the binary digital stream back into pixel form
-    hidden_img_pixels = np.packbits(hidden_img_binary)
-    # Step 5:
-    # Reshape the pixel data to form the hidden image
-    hidden_img = np.reshape(hidden_img_pixels, (rows, cols))
-
-    # Save the hidden image in the root directory of the project
-    cv2.imwrite('hidden_image.png', hidden_img)
+    #
+    # # Step 2:
+    # # Load the position sequences from the text file
+    # with open(position_sequences_path, 'r') as f:
+    #     # Read the first line and split it into rows and columns
+    #     rows, cols = map(int, next(f).strip().split())
+    #
+    #     # Read the remaining lines as position sequences
+    #     position_sequences = [tuple(map(int, line.strip().split())) for line in f]
+    #     print("Position Sequences", position_sequences)
+    #
+    # # Step 3:
+    # # Extract the binary digital stream of the hidden image
+    # hidden_img_binary = np.array([stego_img[pos] & 1 for pos in position_sequences])
+    #
+    # # Ensure that the length of hidden_img_binary is a multiple of 8
+    # if hidden_img_binary.size % 8 != 0:
+    #     padding = np.zeros(8 - hidden_img_binary.size % 8, dtype=np.uint8)
+    #     hidden_img_binary = np.concatenate((hidden_img_binary, padding))
+    #
+    # # Step 4:
+    # # Convert the binary digital stream back into pixel form
+    # hidden_img_pixels = np.packbits(hidden_img_binary)
+    # # Step 5:
+    # # Reshape the pixel data to form the hidden image
+    # hidden_img = np.reshape(hidden_img_pixels, (rows, cols))
+    #
+    # # Save the hidden image in the root directory of the project
+    # cv2.imwrite('hidden_image.png', hidden_img)
 
 
 
