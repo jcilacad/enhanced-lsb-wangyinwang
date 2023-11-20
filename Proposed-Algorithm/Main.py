@@ -5,7 +5,7 @@ import random
 import itertools
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
-from Crypto.Util.Padding import pad
+from Crypto.Util.Padding import pad, unpad
 
 
 def embed(carrier_img_path, hidden_img_path, encryption_key):
@@ -134,7 +134,16 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
     # Decompress stego image
     decompressed_stego_img_bytes = ncompress.decompress(stego_img_bytes)
 
-    
+    # Use SHA-256 to generate a 32-byte key
+    key = SHA256.new(encryption_key.encode()).digest()
+
+    # Create a new AES cipher object with the hashed key
+    cipher = AES.new(key, AES.MODE_ECB)
+
+    # Decrypt the data
+    decrypted_stego_img_bytes = unpad(cipher.decrypt(decompressed_stego_img_bytes), AES.block_size)
+
+
 
 
 
