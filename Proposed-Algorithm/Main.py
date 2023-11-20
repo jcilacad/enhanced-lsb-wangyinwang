@@ -204,18 +204,26 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
             # Decrypt the data
             decrypted_data = unpad(cipher.decrypt(decompressed_data), AES.block_size)
 
-            
+            decrypted_data_bin = ''.join(format(byte, '08b') for byte in decrypted_data)
 
+            # Convert binary to integer
+            decrypted_data_int = int(decrypted_data_bin, 2)
 
+            # Convert integer to byte array
+            decrypted_data_bytes = decrypted_data_int.to_bytes((decrypted_data_int.bit_length() + 7) // 8, 'big')
 
+            # Convert byte array to numpy array
+            decrypted_data_np = np.frombuffer(decrypted_data_bytes, dtype=np.uint8)
 
+            # Step 4:
+            # Convert the binary digital stream back into pixel form
+            # Reshape the numpy array to original image shape
+            # You need to know the original shape of the image (height, width, channels)
+            original_shape = (rows, cols, 1)  # replace with the original shape
+            decrypted_img = decrypted_data_np.reshape(original_shape)
 
-
-
-
-
-
-
+            # Save the hidden image in the root directory of the project
+            cv2.imwrite('hidden_image.png', decrypted_img)
 
 
         else:
