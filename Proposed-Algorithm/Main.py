@@ -122,10 +122,10 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
 
 def extract(stego_img_path, position_sequences_path, encryption_key):
 
-    
+
     # Step 1:
-    # Load the stego image and convert it to grayscale
-    stego_img = cv2.imread(stego_img_path, cv2.IMREAD_GRAYSCALE)
+    # Load the stego image
+    stego_img = cv2.imread(stego_img_path, cv2.IMREAD_COLOR)
 
     # Step 2:
     # Load the position sequences from the text file
@@ -137,24 +137,87 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
         position_sequences = [tuple(map(int, line.strip().split())) for line in f]
         print("Position Sequences", position_sequences)
 
-    # Step 3:
-    # Extract the binary digital stream of the hidden image
-    hidden_img_binary = np.array([stego_img[pos] & 1 for pos in position_sequences])
 
-    # Ensure that the length of hidden_img_binary is a multiple of 8
-    if hidden_img_binary.size % 8 != 0:
-        padding = np.zeros(8 - hidden_img_binary.size % 8, dtype=np.uint8)
-        hidden_img_binary = np.concatenate((hidden_img_binary, padding))
 
-    # Step 4:
-    # Convert the binary digital stream back into pixel form
-    hidden_img_pixels = np.packbits(hidden_img_binary)
-    # Step 5:
-    # Reshape the pixel data to form the hidden image
-    hidden_img = np.reshape(hidden_img_pixels, (rows, cols))
+    # Check if the stego image is 8-bit grayscale or 24-bit rgb image
+    if stego_img is not None:
+        if len(stego_img.shape) == 2 or (
+            len(stego_img.shape) == 3 and np.all(stego_img[:, :, 0] == stego_img[:, :, 1]) and np.all(
+            stego_img[:, :, 0] == stego_img[:, :, 2])):
+            print("The image is 8-bit grayscale.")
 
-    # Save the hidden image in the root directory of the project
-    cv2.imwrite('hidden_image.png', hidden_img)
+            # Step 3:
+            # Extract the binary digital stream of the hidden image
+            hidden_img_binary = np.array([stego_img[pos] & 1 for pos in position_sequences])
+
+            # Ensure that the length of hidden_img_binary is a multiple of 8
+            if hidden_img_binary.size % 8 != 0:
+                padding = np.zeros(8 - hidden_img_binary.size % 8, dtype=np.uint8)
+                hidden_img_binary = np.concatenate((hidden_img_binary, padding))
+
+            # Step 4:
+            # Convert the binary digital stream back into pixel form
+            hidden_img_pixels = np.packbits(hidden_img_binary)
+            # Step 5:
+            # Reshape the pixel data to form the hidden image
+            hidden_img = np.reshape(hidden_img_pixels, (rows, cols))
+
+            # Save the hidden image in the root directory of the project
+            cv2.imwrite('hidden_image.png', hidden_img)
+
+        elif len(stego_img.shape) == 3:
+
+            print("The image is 24-bit RGB.")
+
+            # Step 3:
+            # Extract the binary digital stream of the hidden image
+            hidden_img_binary = []
+            for pos in position_sequences:
+                pixel = stego_img[pos]
+                # Extract the 3 least significant bits from the red channel
+                red_bits = pixel[0] & 7
+                # Extract the 2 least significant bits from the green channel
+                green_bits = pixel[1] & 3
+                # Extract the 3 least significant bits from the blue channel
+                blue_bits = pixel[2] & 7
+
+                # Combine the bits to form the 8-bit grayscale value
+                grayscale_value = (red_bits << 5) | (green_bits << 3) | blue_bits
+
+                # Append the grayscale value to the hidden_img_binary list
+                hidden_img_binary.append(grayscale_value)
+
+            hidden_img_binary = np.array(hidden_img_binary)
+
+            # Convert the binary data back into bytes
+            hidden_img_bytes = hidden_img_binary.tobytes()
+
+            # Decompress the data using ncompress
+            decompressed_data = ncompress.decompress(hidden_img_bytes)
+
+
+
+
+
+
+
+
+
+
+
+        else:
+            print("The image is neither 8-bit grayscale nor 24-bit RGB.")
+
+    else:
+        print("The image could not be read.")
+
+
+
+
+
+
+
+
 
 
 def main():
