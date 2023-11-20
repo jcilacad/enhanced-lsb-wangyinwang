@@ -195,6 +195,19 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
             # Decompress the data using ncompress
             decompressed_data = ncompress.decompress(hidden_img_bytes)
 
+            # Use SHA-256 to generate a 32-byte key
+            key = SHA256.new(encryption_key.encode()).digest()
+
+            # Create a new AES cipher object with the hashed key
+            cipher = AES.new(key, AES.MODE_ECB)
+
+            # Decrypt the data
+            decrypted_data = unpad(cipher.decrypt(decompressed_data), AES.block_size)
+
+            
+
+
+
 
 
 
