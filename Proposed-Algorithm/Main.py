@@ -21,7 +21,7 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
     assert hidden_img.size <= carrier_img.size, "The hidden image is larger than the carrier image"
 
     # Step 2:
-    # Convert the hidden image to a binary stream and encrypt it.
+    # Convert the hidden image to a binary stream.
     hidden_img_binary = np.unpackbits(hidden_img)
 
     # Convert hidden_img_binary to bytes for encryption and compression
@@ -120,10 +120,30 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
         print("The image could not be read.")
 
 
-def extract(stego_img_path, position_sequences_path):
+def extract(stego_img_path, position_sequences_path, encryption_key):
     # Step 1:
-    # Load the stego image and convert it to grayscale
-    stego_img = cv2.imread(stego_img_path, cv2.IMREAD_GRAYSCALE)
+    # Remove the conversion of stego-image to grayscale
+    stego_img = cv2.imread(stego_img_path)
+
+    # Convert the stego image to a binary stream.
+    stego_img_binary = np.unpackbits(stego_img)
+
+    # Convert stego_img_binary to bytes for decryption and decompression
+    stego_img_bytes = stego_img_binary.tobytes()
+
+    # Decompress stego image
+    decompressed_stego_img_bytes = ncompress.decompress(stego_img_bytes)
+
+    
+
+
+
+
+
+
+
+
+
 
     # Step 2:
     # Load the position sequences from the text file
