@@ -39,6 +39,8 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
     # Compress the encrypted bytes
     compressed_img_bytes = ncompress.compress(encrypted_img_bytes)
 
+    print("Compressed_img_bytes - dito", len(compressed_img_bytes))
+
     # Convert bytes to binary
     encrypted_img_bin = ''.join(format(byte, '08b') for byte in encrypted_img_bytes)
     compressed_img_bin = ''.join(format(byte, '08b') for byte in compressed_img_bytes)
@@ -96,20 +98,30 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
             # Create an iterator for the compressed_data
             compressed_data_iter = iter(compressed_img_bin)
 
-            for pos in itertools.islice(random_pixel_coords, len(compressed_img_bin) // 8):
-                # Get the next 8 bits from compressed_data
-                bits = [next(compressed_data_iter) for _ in range(8)]
-
-                # Split the bits among the color channels
+            # Embed the hidden image into the carrier image
+            for i in range(0, len(hidden_img_binary), 8):
+                bits = hidden_img_binary[i:i + 8]
                 red_bits, blue_bits, green_bits = bits[:3], bits[3:5], bits[5:]
-
-                # Convert the bits to integers
                 red = int(''.join(map(str, red_bits)), 2)
                 blue = int(''.join(map(str, blue_bits)), 2)
                 green = int(''.join(map(str, green_bits)), 2)
-
-                # Embed the bits in the color channels of the image
+                pos = random_pixel_coords[i // 8]
                 carrier_img[pos] = (carrier_img[pos] & np.array([~7, ~3, ~7])) | np.array([red, blue, green])
+
+            # for pos in itertools.islice(random_pixel_coords, len(compressed_img_bin) // 8):
+            #     # Get the next 8 bits from compressed_data
+            #     bits = [next(compressed_data_iter) for _ in range(8)]
+            #
+            #     # Split the bits among the color channels
+            #     red_bits, blue_bits, green_bits = bits[:3], bits[3:5], bits[5:]
+            #
+            #     # Convert the bits to integers
+            #     red = int(''.join(map(str, red_bits)), 2)
+            #     blue = int(''.join(map(str, blue_bits)), 2)
+            #     green = int(''.join(map(str, green_bits)), 2)
+            #
+            #     # Embed the bits in the color channels of the image
+            #     carrier_img[pos] = (carrier_img[pos] & np.array([~7, ~3, ~7])) | np.array([red, blue, green])
 
             # Save the stego-image
             cv2.imwrite('stego_image.png', carrier_img)
@@ -168,76 +180,32 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
         elif len(stego_img.shape) == 3:
 
             print("The image is 24-bit RGB.")
+            with open('position_sequences.txt', 'r') as f:
+                hidden_img_shape = tuple(map(int, f.readline().split()))
+                pixel_coords = [tuple(map(int, line.split())) for line in f]
+            random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
+            compressed_img_bin = ''
+            for pos in itertools.islice(random_pixel_coords, np.prod(hidden_img_shape)):
+                red, blue, green = stego_img[pos] & np.array([7, 3, 7])
+                bits = list(map(int, format(red, '03b') + format(blue, '02b') + format(green, '03b')))
+                compressed_img_bin += ''.join(map(str, bits))
+            compressed_img_bytes = bytes(
+                int(compressed_img_bin[i:i + 8], 2) for i in range(0, len(compressed_img_bin), 8))
 
-            # Step 3:
-            # Extract the binary digital stream of the hidden image
-            hidden_img_binary = []
-            for pos in position_sequences:
-                pixel = stego_img[pos]
-                # Extract the 3 least significant bits from the red channel
-                red_bits = pixel[0] & 7
-                # Extract the 2 least significant bits from the green channel
-                green_bits = pixel[1] & 3
-                # Extract the 3 least significant bits from the blue channel
-                blue_bits = pixel[2] & 7
-
-                # Combine the bits to form the 8-bit grayscale value
-                grayscale_value = (red_bits << 5) | (green_bits << 3) | blue_bits
-
-                # Append the grayscale value to the hidden_img_binary list
-                hidden_img_binary.append(grayscale_value)
-
-            hidden_img_binary = np.array(hidden_img_binary)
-
-            # Convert the binary data back into bytes
-            hidden_img_bytes = hidden_img_binary.tobytes()
-
-            # Decompress the data using ncompress
-            decompressed_data = ncompress.decompress(hidden_img_bytes)
-
-            # Use SHA-256 to generate a 32-byte key
+            print("Len", len(compressed_img_bytes))
+            encrypted_img_bytes = ncompress.decompress(compressed_img_bytes)  # Use ncompress for decompression
             key = SHA256.new(encryption_key.encode()).digest()
-
-            # Create a new AES cipher object with the hashed key
             cipher = AES.new(key, AES.MODE_ECB)
-
-            # Decrypt the data
-            decrypted_data = unpad(cipher.decrypt(decompressed_data), AES.block_size)
-
-            decrypted_data_bin = ''.join(format(byte, '08b') for byte in decrypted_data)
-
-            # Convert binary to integer
-            decrypted_data_int = int(decrypted_data_bin, 2)
-
-            # Convert integer to byte array
-            decrypted_data_bytes = decrypted_data_int.to_bytes((decrypted_data_int.bit_length() + 7) // 8, 'big')
-
-            # Convert byte array to numpy array
-            decrypted_data_np = np.frombuffer(decrypted_data_bytes, dtype=np.uint8)
-
-            # Step 4:
-            # Convert the binary digital stream back into pixel form
-            # Reshape the numpy array to original image shape
-            # You need to know the original shape of the image (height, width, channels)
-            original_shape = (rows, cols, 1)  # replace with the original shape
-            decrypted_img = decrypted_data_np.reshape(original_shape)
-
-            # Save the hidden image in the root directory of the project
-            cv2.imwrite('hidden_image.png', decrypted_img)
-
+            hidden_img_bytes = unpad(cipher.decrypt(encrypted_img_bytes), AES.block_size)
+            hidden_img_binary = np.frombuffer(hidden_img_bytes, dtype=np.uint8)
+            hidden_img = np.packbits(hidden_img_binary).reshape(hidden_img_shape)
+            cv2.imwrite('hidden_image.png', hidden_img)
 
         else:
             print("The image is neither 8-bit grayscale nor 24-bit RGB.")
 
     else:
         print("The image could not be read.")
-
-
-
-
-
-
-
 
 
 
