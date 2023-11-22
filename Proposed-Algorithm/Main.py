@@ -123,8 +123,8 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
             print("The image is 24-bit RGB.")
 
             # Embed the hidden image into the carrier image
-            for i in range(0, len(hidden_img_binary), 8):
-                bits = hidden_img_binary[i:i + 8]
+            for i in range(0, len(compressed_img_bin), 8):
+                bits = compressed_img_bin[i:i + 8]
                 red_bits, blue_bits, green_bits = bits[:3], bits[3:5], bits[5:]
                 red = int(''.join(map(str, red_bits)), 2)
                 blue = int(''.join(map(str, blue_bits)), 2)
