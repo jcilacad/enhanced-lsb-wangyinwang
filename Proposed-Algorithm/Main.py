@@ -7,6 +7,19 @@ from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
 from Crypto.Util.Padding import pad, unpad
 
+class Cryptor:
+    def __init__(self, key):
+        self.SECRET_KEY = str(key).encode("utf-8")
+        self.BLOCK_SIZE = 16 # Bytes
+        self.CIPHER = AES.new(self.SECRET_KEY, AES.MODE_ECB) # never use ECB in strong systems obviously
+
+    def encrypt(self, data):
+        return self.CIPHER.encrypt(pad(data, self.BLOCK_SIZE))
+
+    def decrypt(self, encoded_data):
+        self.CIPHER = AES.new(self.SECRET_KEY, AES.MODE_ECB)
+        return unpad(self.CIPHER.decrypt(encoded_data), self.BLOCK_SIZE)
+
 
 def embed(carrier_img_path, hidden_img_path, encryption_key):
     # Step 1:
@@ -27,23 +40,36 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
     # Convert hidden_img_binary to bytes for encryption and compression
     hidden_img_bytes = hidden_img_binary.tobytes()
 
-    # Use SHA-256 to generate a 32-byte key
-    key = SHA256.new(encryption_key.encode()).digest()
+    # Use SHA-256 to generate a 32-byte key, then truncate to 16 bytes for AES-128
+    # key = SHA256.new(encryption_key.encode()).digest()[:16]
+    #
+    # # Create a new AES cipher object with the hashed key
+    # cipher = AES.new(key, AES.MODE_ECB)
+    #
+    # # Pad the data to a multiple of 16 bytes before encryption
+    # padded_img_bytes = pad(hidden_img_bytes, AES.block_size)
+    #
+    # # Encrypt the padded data
+    # encrypted_img_bytes = cipher.encrypt(padded_img_bytes)
 
-    # Create a new AES cipher object with the hashed key
-    cipher = AES.new(key, AES.MODE_ECB)
+    cryptor = Cryptor(encryption_key)
 
-    # Encrypt the data
-    encrypted_img_bytes = cipher.encrypt(pad(hidden_img_bytes, AES.block_size))
+    encrypted_img_bytes = cryptor.encrypt(hidden_img_bytes)
 
     # Compress the encrypted bytes
-    compressed_img_bytes = ncompress.compress(encrypted_img_bytes)
+    compressed_img_bytes = lzw_compress(encrypted_img_bytes)
 
     print("Compressed_img_bytes - dito", len(compressed_img_bytes))
 
     # Convert bytes to binary
     encrypted_img_bin = ''.join(format(byte, '08b') for byte in encrypted_img_bytes)
     compressed_img_bin = ''.join(format(byte, '08b') for byte in compressed_img_bytes)
+
+    # Convert the binary string into an array of individual bits
+    compressed_img_bin = [int(bit) for bit in compressed_img_bin]
+
+    # Convert list to numpy array
+    compressed_img_bin = np.array(compressed_img_bin)
 
     print("============================ original")
     # print(hidden_img_binary)
@@ -85,18 +111,16 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
         if len(carrier_img.shape) == 2 or (
             len(carrier_img.shape) == 3 and np.all(carrier_img[:, :, 0] == carrier_img[:, :, 1]) and np.all(
             carrier_img[:, :, 0] == carrier_img[:, :, 2])):
+
             print("The image is 8-bit grayscale.")
             for bit, pos in zip(compressed_img_bin, itertools.islice(random_pixel_coords, len(compressed_img_bin))):
-                carrier_img[pos][0] = (carrier_img[pos][0] & ~1) | int(bit)
+                carrier_img[pos] = (carrier_img[pos] & ~1) | bit
 
             # Save the stego-image
             cv2.imwrite('stego_image.png', carrier_img)
         elif len(carrier_img.shape) == 3:
 
             print("The image is 24-bit RGB.")
-
-            # Create an iterator for the compressed_data
-            compressed_data_iter = iter(compressed_img_bin)
 
             # Embed the hidden image into the carrier image
             for i in range(0, len(hidden_img_binary), 8):
@@ -107,21 +131,6 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
                 green = int(''.join(map(str, green_bits)), 2)
                 pos = random_pixel_coords[i // 8]
                 carrier_img[pos] = (carrier_img[pos] & np.array([~7, ~3, ~7])) | np.array([red, blue, green])
-
-            # for pos in itertools.islice(random_pixel_coords, len(compressed_img_bin) // 8):
-            #     # Get the next 8 bits from compressed_data
-            #     bits = [next(compressed_data_iter) for _ in range(8)]
-            #
-            #     # Split the bits among the color channels
-            #     red_bits, blue_bits, green_bits = bits[:3], bits[3:5], bits[5:]
-            #
-            #     # Convert the bits to integers
-            #     red = int(''.join(map(str, red_bits)), 2)
-            #     blue = int(''.join(map(str, blue_bits)), 2)
-            #     green = int(''.join(map(str, green_bits)), 2)
-            #
-            #     # Embed the bits in the color channels of the image
-            #     carrier_img[pos] = (carrier_img[pos] & np.array([~7, ~3, ~7])) | np.array([red, blue, green])
 
             # Save the stego-image
             cv2.imwrite('stego_image.png', carrier_img)
@@ -147,7 +156,7 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
 
         # Read the remaining lines as position sequences
         position_sequences = [tuple(map(int, line.strip().split())) for line in f]
-        print("Position Sequences", position_sequences)
+        # print("Position Sequences", position_sequences)
 
 
 
@@ -193,12 +202,30 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
                 int(compressed_img_bin[i:i + 8], 2) for i in range(0, len(compressed_img_bin), 8))
 
             print("Len", len(compressed_img_bytes))
-            encrypted_img_bytes = ncompress.decompress(compressed_img_bytes)  # Use ncompress for decompression
-            key = SHA256.new(encryption_key.encode()).digest()
-            cipher = AES.new(key, AES.MODE_ECB)
-            hidden_img_bytes = unpad(cipher.decrypt(encrypted_img_bytes), AES.block_size)
-            hidden_img_binary = np.frombuffer(hidden_img_bytes, dtype=np.uint8)
+            encrypted_img_bytes = lzw_decompress(compressed_img_bytes)  # Use ncompress for decompression
+            # Use SHA-256 to generate a 32-byte key, then truncate to 16 bytes for AES-128
+            # key = SHA256.new(encryption_key.encode()).digest()[:16]
+            #
+            # # Create a new AES cipher object with the hashed key
+            # cipher = AES.new(key, AES.MODE_ECB)
+            #
+            # # Decrypt the decompressed bytes
+            # decrypted_img_bytes = cipher.decrypt(encrypted_img_bytes)
+            #
+            # # Unpad the decrypted bytes
+            # unpadded_img_bytes = unpad(decrypted_img_bytes, AES.block_size)
+
+            cryptor = Cryptor(encryption_key)
+
+            # Decrypt data
+            unpadded_img_bytes = cryptor.decrypt(encrypted_img_bytes)
+
+            # Convert the unpadded bytes back to binary
+            hidden_img_binary = np.frombuffer(unpadded_img_bytes, dtype=np.uint8)
+
+            # Reshape the binary data back to the original image shape
             hidden_img = np.packbits(hidden_img_binary).reshape(hidden_img_shape)
+
             cv2.imwrite('hidden_image.png', hidden_img)
 
         else:
@@ -208,6 +235,47 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
         print("The image could not be read.")
 
 
+def lzw_compress(input_bytes):
+    dictionary = {bytes([i]): i for i in range(256)}
+    current_bytes = bytes()
+    compressed_data = []
+
+    for byte in input_bytes:
+        new_bytes = current_bytes + bytes([byte])
+        if new_bytes in dictionary:
+            current_bytes = new_bytes
+        else:
+            compressed_data.append(dictionary[current_bytes])
+            dictionary[new_bytes] = len(dictionary)
+            current_bytes = bytes([byte])
+
+    if current_bytes:
+        compressed_data.append(dictionary[current_bytes])
+
+    # Convert the list of codes into bytes
+    compressed_bytes = bytearray()
+    for code in compressed_data:
+        compressed_bytes.extend(code.to_bytes((code.bit_length() + 7) // 8, 'big'))
+
+    return bytes(compressed_bytes)
+
+def lzw_decompress(compressed_bytes):
+    dictionary = {i: bytes([i]) for i in range(256)}
+    current_bytes = dictionary[compressed_bytes[0]]
+    decompressed_data = [current_bytes]
+
+    for code in compressed_bytes[1:]:
+        if code not in dictionary:
+            new_bytes = current_bytes + current_bytes[:1]
+        else:
+            new_bytes = dictionary[code]
+
+        decompressed_data.append(new_bytes)
+
+        dictionary[len(dictionary)] = current_bytes + new_bytes[:1]
+        current_bytes = new_bytes
+
+    return b"".join(decompressed_data)
 
 def main():
     operation = input("Choose operation ('embed' or 'extract'): ")
