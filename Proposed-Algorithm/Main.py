@@ -7,20 +7,6 @@ from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
 from Crypto.Util.Padding import pad, unpad
 
-class Cryptor:
-    def __init__(self, key):
-        self.SECRET_KEY = str(key).encode("utf-8")
-        self.BLOCK_SIZE = 16 # Bytes
-        self.CIPHER = AES.new(self.SECRET_KEY, AES.MODE_ECB) # never use ECB in strong systems obviously
-
-    def encrypt(self, data):
-        return self.CIPHER.encrypt(pad(data, self.BLOCK_SIZE))
-
-    def decrypt(self, encoded_data):
-        self.CIPHER = AES.new(self.SECRET_KEY, AES.MODE_ECB)
-        return unpad(self.CIPHER.decrypt(encoded_data), self.BLOCK_SIZE)
-
-
 def embed(carrier_img_path, hidden_img_path, encryption_key):
     # Step 1:
     # Read the images
@@ -34,27 +20,28 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
     assert hidden_img.size <= carrier_img.size, "The hidden image is larger than the carrier image"
 
     # Step 2:
-    # Convert the hidden image to a binary stream.
+    # Convert the hidden image to a binary stream
     hidden_img_binary = np.unpackbits(hidden_img)
 
     # Convert hidden_img_binary to bytes for encryption and compression
-    hidden_img_bytes = hidden_img_binary.tobytes()
+    hidden_img_bytes = hidden_img.tobytes()
 
-    # Use SHA-256 to generate a 32-byte key, then truncate to 16 bytes for AES-128
-    # key = SHA256.new(encryption_key.encode()).digest()[:16]
-    #
-    # # Create a new AES cipher object with the hashed key
-    # cipher = AES.new(key, AES.MODE_ECB)
-    #
-    # # Pad the data to a multiple of 16 bytes before encryption
-    # padded_img_bytes = pad(hidden_img_bytes, AES.block_size)
-    #
-    # # Encrypt the padded data
-    # encrypted_img_bytes = cipher.encrypt(padded_img_bytes)
+    # Use SHA-256 to generate a 16-byte key, then truncate to 16 bytes for AES-128
+    key = SHA256.new(encryption_key.encode()).digest()[:16]
 
-    cryptor = Cryptor(encryption_key)
+    # Create a new AES cipher object with the hashed key and AES.MODE_CBC mode
+    cipher = AES.new(key, AES.MODE_CBC)
 
-    encrypted_img_bytes = cryptor.encrypt(hidden_img_bytes)
+    # Pad the data to a multiple of 16 bytes before encryption
+    padded_img_bytes = pad(hidden_img_bytes, 16)
+
+    print(f'Padded data: {padded_img_bytes}')  # Debugging line
+
+    # Encrypt the padded data
+    encrypted_img_bytes = cipher.encrypt(padded_img_bytes)
+
+    # Convert ct_bytes to a binary stream
+    ct_bytes_binary = np.unpackbits(np.frombuffer(encrypted_img_bytes, dtype=np.uint8))
 
     # Compress the encrypted bytes
     compressed_img_bytes = lzw_compress(encrypted_img_bytes)
@@ -63,7 +50,8 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
 
     # Convert bytes to binary
     encrypted_img_bin = ''.join(format(byte, '08b') for byte in encrypted_img_bytes)
-    compressed_img_bin = ''.join(format(byte, '08b') for byte in compressed_img_bytes)
+    # compressed_img_bin = ''.join(format(byte, '08b') for byte in compressed_img_bytes)
+    compressed_img_bin = np.unpackbits(np.frombuffer(compressed_img_bytes, dtype=np.uint8))
 
     # Convert the binary string into an array of individual bits
     compressed_img_bin = [int(bit) for bit in compressed_img_bin]
@@ -91,6 +79,8 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
     # Generate a random sequence of list from pixel_coords
     random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
 
+    # TODO: Create a condition for RGB Image, Using 3-2-3 technique, for 8 bits we are only going to embed that in one pixel
+
     # Pixels to embed from hidden image to carrier image
     sliced_pixel_coords = itertools.islice(random_pixel_coords, len(compressed_img_bin))
 
@@ -102,6 +92,10 @@ def embed(carrier_img_path, hidden_img_path, encryption_key):
         # Write the position sequences
         for pos in sliced_pixel_coords:
             f.write(f'{pos[0]} {pos[1]}\n')
+
+
+    ## TODO: Up to here
+
 
     # Step 6:
     # Embed the hidden image into the carrier image
@@ -165,6 +159,7 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
         if len(stego_img.shape) == 2 or (
             len(stego_img.shape) == 3 and np.all(stego_img[:, :, 0] == stego_img[:, :, 1]) and np.all(
             stego_img[:, :, 0] == stego_img[:, :, 2])):
+
             print("The image is 8-bit grayscale.")
 
             # Step 3:
@@ -175,6 +170,31 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
             if hidden_img_binary.size % 8 != 0:
                 padding = np.zeros(8 - hidden_img_binary.size % 8, dtype=np.uint8)
                 hidden_img_binary = np.concatenate((hidden_img_binary, padding))
+
+            # Convert hidden image binary to bytes
+            hidden_img_bytes = hidden_img_binary.tobytes()
+
+            # Decompress hidden img bytes
+            decompressed_img_bytes = lzw_decompress(hidden_img_bytes)
+
+            key = SHA256.new(encryption_key.encode()).digest()[:16]
+
+            # Create a new AES cipher object with the hashed key
+            cipher = AES.new(key, AES.MODE_CBC)
+
+            # Decrypt the decompressed bytes
+            decrypted_img_bytes = cipher.decrypt(decompressed_img_bytes)
+
+            # Unpad the decrypted bytes
+            unpadded_img_bytes = unpad(decrypted_img_bytes, 16)
+
+            decrypted_img_bin_n_array = ''.join(format(byte, '08b') for byte in unpadded_img_bytes)
+
+            # Convert the binary string into an array of individual bits
+            decrypted_img_bin_array = [int(bit) for bit in decrypted_img_bin_n_array]
+
+            # Convert list to numpy array
+            hidden_img_binary = np.array(decrypted_img_bin_array)
 
             # Step 4:
             # Convert the binary digital stream back into pixel form
@@ -204,21 +224,18 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
             print("Len", len(compressed_img_bytes))
             encrypted_img_bytes = lzw_decompress(compressed_img_bytes)  # Use ncompress for decompression
             # Use SHA-256 to generate a 32-byte key, then truncate to 16 bytes for AES-128
-            # key = SHA256.new(encryption_key.encode()).digest()[:16]
-            #
-            # # Create a new AES cipher object with the hashed key
-            # cipher = AES.new(key, AES.MODE_ECB)
-            #
-            # # Decrypt the decompressed bytes
-            # decrypted_img_bytes = cipher.decrypt(encrypted_img_bytes)
-            #
-            # # Unpad the decrypted bytes
-            # unpadded_img_bytes = unpad(decrypted_img_bytes, AES.block_size)
+            key = SHA256.new(encryption_key.encode()).digest()[:16]
 
-            cryptor = Cryptor(encryption_key)
+            # Create a new AES cipher object with the hashed key
+            cipher = AES.new(key, AES.MODE_ECB)
 
-            # Decrypt data
-            unpadded_img_bytes = cryptor.decrypt(encrypted_img_bytes)
+            # Decrypt the decompressed bytes
+            decrypted_img_bytes = cipher.decrypt(encrypted_img_bytes)
+
+            print(f'Decrypted data: {decrypted_img_bytes}')  # Debugging line
+
+            # Unpad the decrypted bytes
+            unpadded_img_bytes = unpad(decrypted_img_bytes, AES.block_size)
 
             # Convert the unpadded bytes back to binary
             hidden_img_binary = np.frombuffer(unpadded_img_bytes, dtype=np.uint8)
