@@ -34,6 +34,16 @@ def decrypt_image(encrypted_img, key):
 
     return decrypted_img
 
+# Adjust key length of 16 bytes
+def adjust_key_length(key):
+    # If key is less than 16 bytes, pad with zeros
+    if len(key) < 16:
+        key += b'\0' * (16 - len(key))
+    # If key is more than 16 bytes, truncate to 16 bytes
+    elif len(key) > 16:
+        key = key[:16]
+    return key
+
 
 def embed(carrier_img_path, hidden_img_path, secret_key):
     # Step 1:
