@@ -110,10 +110,19 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
     print("Compressed Hidden Image - Total Pixel Size - ", len(compressed_hidden_img))
 
-
-
     # FIXME: Ensure the compressed image is not larger than the carrier image
     assert len(compressed_hidden_img) <= carrier_img.size, "The hidden image is larger than the carrier image"
+
+    # Step 2: Convert the hidden image to a binary stream
+    compressed_hidden_img_binary = np.unpackbits(compressed_hidden_img)
+
+    # Steps 3 & 4:
+    # Generate a list of all pixel coordinates in the carrier image
+    pixel_coords = [(i, j) for i in range(carrier_img.shape[0]) for j in range(carrier_img.shape[1])]
+
+    # Step 5:
+    # Generate a random sequence of list from pixel_coords
+    random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
 
 
     # TODO: Add the len(encrypted_hidden_img) to the 2nd line of txt file for compression purposes
@@ -157,7 +166,6 @@ def extract(stego_img_path, position_sequences_path, secret_key):
     #                                           (len(encrypted_hidden_img))))
     #
     # print("Decompressed Hidden Image - Total Pixel Size - ", len(decompressed_hidden_img))
-
 
     # TODO: Use this for decryption process
     # decrypted_img, decrypted_shape = decrypt_image(encrypted_hidden_img, original_shape, secret_key)
