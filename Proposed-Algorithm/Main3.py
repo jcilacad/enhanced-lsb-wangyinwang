@@ -4,69 +4,62 @@ import random
 import itertools
 
 from Crypto.Cipher import AES
+import cv2
+import numpy as np
 
-# Padding for AES-128
+
+# Pad to make sure the AES-128 used 16 bytes
 def pad(data):
     return data + b"\x00" * (16 - len(data) % 16)
 
-# Encryption Process
-def encrypt_image(image_path, key):
-    img = cv2.imread(image_path)
-    img_data = img.tostring()
 
-    cipher = AES.new(key, AES.MODE_ECB)
-    encrypted_data = cipher.encrypt(pad(img_data))
-
-    encrypted_img = np.frombuffer(encrypted_data, dtype=np.uint8)
-    encrypted_img = encrypted_img.reshape(img.shape)
-
-    return encrypted_img
-
-# Decryption Process
-def decrypt_image(encrypted_img, key):
-    encrypted_data = encrypted_img.tostring()
-
-    cipher = AES.new(key, AES.MODE_ECB)
-    decrypted_data = cipher.decrypt(pad(encrypted_data))
-
-    decrypted_img = np.frombuffer(decrypted_data, dtype=np.uint8)
-    decrypted_img = decrypted_img.reshape(encrypted_img.shape)
-
-    return decrypted_img
-
-# Adjust key length of 16 bytes
+# Adjust the key length to 16 bytes
 def adjust_key_length(key):
-    # Convert string key to bytes
     key = key.encode()
 
-    # If key is less than 16 bytes, pad with zeros
     if len(key) < 16:
         key += b'\0' * (16 - len(key))
-    # If key is more than 16 bytes, truncate to 16 bytes
     elif len(key) > 16:
         key = key[:16]
     return key
 
 
-def embed(carrier_img_path, hidden_img_path, secret_key):
-    # Step 1:
-    # Read the images
+# Encrypt hidden image
+def encrypt_image(img, key):
+    img_data = img.tobytes()
 
+    cipher = AES.new(key, AES.MODE_ECB)
+    encrypted_data = cipher.encrypt(pad(img_data))
+
+    encrypted_img = np.frombuffer(encrypted_data, dtype=np.uint8)
+
+    return encrypted_img, img.shape
+
+
+# Decrypt hidden image
+def decrypt_image(encrypted_img, original_shape, key):
+    encrypted_data = encrypted_img.tobytes()
+
+    cipher = AES.new(key, AES.MODE_ECB)
+    decrypted_data = cipher.decrypt(encrypted_data)
+
+    decrypted_img = np.frombuffer(decrypted_data, dtype=np.uint8)
+    decrypted_img = decrypted_img.reshape(original_shape)
+
+    return decrypted_img
+
+
+# Embedding Process
+def embed(carrier_img_path, hidden_img_path, secret_key):
     # FIXME: Remove the conversion of carrier image to grayscale
     carrier_img = cv2.imread(carrier_img_path, cv2.IMREAD_COLOR)
     hidden_img = cv2.imread(hidden_img_path, cv2.IMREAD_GRAYSCALE)
 
-    # FIXME: Adjust key length for 16 bytes
+    # Adjust the key length to 16
     secret_key = adjust_key_length(secret_key)
 
-    # FIXME: Encrypt hidden image using AES-128
-    encrypted_hidden_img = encrypt_image(hidden_img, secret_key)
-
-    print(len(encrypted_hidden_img))
-
-    decrypted_img = decrypt_image(encrypted_hidden_img, secret_key)
-
-    print(len(decrypted_img))
+    # FIXME: Encrypt the hidden image
+    encrypted_hidden_img, original_shape = encrypt_image(hidden_img, secret_key)
 
 
 
@@ -108,6 +101,16 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
 
 def extract(stego_img_path, position_sequences_path, secret_key):
+
+    # TODO: Use this for decryption process
+    # decrypted_img = decrypt_image(encrypted_hidden_img, (len(encrypted_hidden_img), 1), secret_key)
+    # print(len(decrypted_img))
+    #
+    # bit_image = np.unpackbits(decrypted_img)
+    # print(bit_image)
+    # print(decrypted_img)
+
+
     # Step 1:
     # Load the stego image and convert it to grayscale
     stego_img = cv2.imread(stego_img_path, cv2.IMREAD_GRAYSCALE)
