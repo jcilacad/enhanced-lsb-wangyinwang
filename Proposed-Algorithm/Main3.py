@@ -36,6 +36,9 @@ def decrypt_image(encrypted_img, key):
 
 # Adjust key length of 16 bytes
 def adjust_key_length(key):
+    # Convert string key to bytes
+    key = key.encode()
+
     # If key is less than 16 bytes, pad with zeros
     if len(key) < 16:
         key += b'\0' * (16 - len(key))
@@ -53,8 +56,11 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     carrier_img = cv2.imread(carrier_img_path, cv2.IMREAD_COLOR)
     hidden_img = cv2.imread(hidden_img_path, cv2.IMREAD_GRAYSCALE)
 
+    # FIXME: Adjust key length for 16 bytes
+    secret_key = adjust_key_length(secret_key)
+
     # FIXME: Encrypt hidden image using AES-128
-    encrypted_hidden_img = encrypt_image(hidden_img_path, secret_key)
+    encrypted_hidden_img = encrypt_image(hidden_img, secret_key)
 
     print(len(encrypted_hidden_img))
 
