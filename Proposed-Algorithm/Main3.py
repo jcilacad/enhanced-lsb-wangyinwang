@@ -6,11 +6,7 @@ import itertools
 from Crypto.Cipher import AES
 import cv2
 import numpy as np
-
-
-# Pad to make sure the AES-128 used 16 bytes
-def pad(data):
-    return data + b"\x00" * (16 - len(data) % 16)
+from Cryptodome.Util.Padding import unpad, pad
 
 
 # Adjust the key length to 16 bytes
@@ -29,7 +25,7 @@ def encrypt_image(img, key):
     img_data = img.tobytes()
 
     cipher = AES.new(key, AES.MODE_ECB)
-    encrypted_data = cipher.encrypt(pad(img_data))
+    encrypted_data = cipher.encrypt(pad(img_data, AES.block_size))
 
     encrypted_img = np.frombuffer(encrypted_data, dtype=np.uint8)
 
@@ -41,12 +37,34 @@ def decrypt_image(encrypted_img, original_shape, key):
     encrypted_data = encrypted_img.tobytes()
 
     cipher = AES.new(key, AES.MODE_ECB)
-    decrypted_data = cipher.decrypt(encrypted_data)
+    decrypted_data = unpad(cipher.decrypt(encrypted_data), AES.block_size)
 
     decrypted_img = np.frombuffer(decrypted_data, dtype=np.uint8)
     decrypted_img = decrypted_img.reshape(original_shape)
 
-    return decrypted_img
+    return decrypted_img, decrypted_img.shape
+
+
+def lzw_compress(input_tuple):
+    input_array, shape = input_tuple
+    input_bytes = input_array.tobytes()
+    dictionary = {bytes([i]): i for i in range(256)}
+    current_bytes = bytes()
+    compressed_data = []
+
+    for byte in input_bytes:
+        new_bytes = current_bytes + bytes([byte])
+        if new_bytes in dictionary:
+            current_bytes = new_bytes
+        else:
+            compressed_data.append(dictionary[current_bytes])
+            dictionary[new_bytes] = len(dictionary)
+            current_bytes = bytes([byte])
+
+    if current_bytes:
+        compressed_data.append(dictionary[current_bytes])
+
+    return compressed_data, shape
 
 
 # Embedding Process
@@ -61,8 +79,17 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     # FIXME: Encrypt the hidden image
     encrypted_hidden_img, original_shape = encrypt_image(hidden_img, secret_key)
 
+    # Compress the encrypted image using LZW Compression
+    compressed_hidden_img, original_shape = lzw_compress((encrypted_hidden_img, original_shape))
+
+    print(len(encrypted_hidden_img))
 
 
+
+
+
+
+    # print(len(compressed_hidden_img))
 
     # # Ensure the hidden image is not larger than the carrier image
     # assert hidden_img.size <= carrier_img.size, "The hidden image is larger than the carrier image"
@@ -101,15 +128,14 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
 
 def extract(stego_img_path, position_sequences_path, secret_key):
-
     # TODO: Use this for decryption process
-    # decrypted_img = decrypt_image(encrypted_hidden_img, (len(encrypted_hidden_img), 1), secret_key)
-    # print(len(decrypted_img))
+    # decrypted_img, decrypted_shape = decrypt_image(encrypted_hidden_img, original_shape, secret_key)
+    #
+    # print(decrypted_img)
     #
     # bit_image = np.unpackbits(decrypted_img)
     # print(bit_image)
     # print(decrypted_img)
-
 
     # Step 1:
     # Load the stego image and convert it to grayscale
