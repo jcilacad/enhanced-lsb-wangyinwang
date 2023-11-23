@@ -5,10 +5,11 @@ import itertools
 
 from Crypto.Cipher import AES
 
-
+# Padding for AES-128
 def pad(data):
     return data + b"\x00" * (16 - len(data) % 16)
 
+# Encryption Process
 def encrypt_image(image_path, key):
     img = cv2.imread(image_path)
     img_data = img.tostring()
@@ -21,8 +22,20 @@ def encrypt_image(image_path, key):
 
     return encrypted_img
 
-def embed(carrier_img_path, hidden_img_path, secret_key):
+# Decryption Process
+def decrypt_image(encrypted_img, key):
+    encrypted_data = encrypted_img.tostring()
 
+    cipher = AES.new(key, AES.MODE_ECB)
+    decrypted_data = cipher.decrypt(pad(encrypted_data))
+
+    decrypted_img = np.frombuffer(decrypted_data, dtype=np.uint8)
+    decrypted_img = decrypted_img.reshape(encrypted_img.shape)
+
+    return decrypted_img
+
+
+def embed(carrier_img_path, hidden_img_path, secret_key):
     # Step 1:
     # Read the images
 
@@ -33,44 +46,52 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     # FIXME: Encrypt hidden image using AES-128
     encrypted_hidden_img = encrypt_image(hidden_img_path, secret_key)
 
-    # Ensure the hidden image is not larger than the carrier image
-    assert hidden_img.size <= carrier_img.size, "The hidden image is larger than the carrier image"
+    print(len(encrypted_hidden_img))
 
-    # Step 2:
-    # Convert the hidden image to a binary stream
-    hidden_img_binary = np.unpackbits(hidden_img)
+    decrypted_img = decrypt_image(encrypted_hidden_img, secret_key)
 
-    # Steps 3 & 4:
-    # Generate a list of all pixel coordinates in the carrier image
-    pixel_coords = [(i, j) for i in range(carrier_img.shape[0]) for j in range(carrier_img.shape[1])]
+    print(len(decrypted_img))
 
-    # Step 5:
-    # Generate a random sequence of list from pixel_coords
-    random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
 
-    # Pixels to embed from hidden image to carrier image
-    sliced_pixel_coords = itertools.islice(random_pixel_coords, len(hidden_img_binary))
 
-    # Save the position sequences to a txt file
-    with open('position_sequences.txt', 'w') as f:
-        # Write the number of rows and columns to the first line
-        f.write(f'{hidden_img.shape[0]} {hidden_img.shape[1]}\n')
 
-        # Write the position sequences
-        for pos in sliced_pixel_coords:
-            f.write(f'{pos[0]} {pos[1]}\n')
-
-    # Step 6:
-    # Embed the hidden image into the carrier image
-    for bit, pos in zip(hidden_img_binary, itertools.islice(random_pixel_coords, len(hidden_img_binary))):
-        carrier_img[pos] = (carrier_img[pos] & ~1) | bit
-
-    # Save the stego-image
-    cv2.imwrite('stego_image.png', carrier_img)
+    # # Ensure the hidden image is not larger than the carrier image
+    # assert hidden_img.size <= carrier_img.size, "The hidden image is larger than the carrier image"
+    #
+    # # Step 2:
+    # # Convert the hidden image to a binary stream
+    # hidden_img_binary = np.unpackbits(hidden_img)
+    #
+    # # Steps 3 & 4:
+    # # Generate a list of all pixel coordinates in the carrier image
+    # pixel_coords = [(i, j) for i in range(carrier_img.shape[0]) for j in range(carrier_img.shape[1])]
+    #
+    # # Step 5:
+    # # Generate a random sequence of list from pixel_coords
+    # random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
+    #
+    # # Pixels to embed from hidden image to carrier image
+    # sliced_pixel_coords = itertools.islice(random_pixel_coords, len(hidden_img_binary))
+    #
+    # # Save the position sequences to a txt file
+    # with open('position_sequences.txt', 'w') as f:
+    #     # Write the number of rows and columns to the first line
+    #     f.write(f'{hidden_img.shape[0]} {hidden_img.shape[1]}\n')
+    #
+    #     # Write the position sequences
+    #     for pos in sliced_pixel_coords:
+    #         f.write(f'{pos[0]} {pos[1]}\n')
+    #
+    # # Step 6:
+    # # Embed the hidden image into the carrier image
+    # for bit, pos in zip(hidden_img_binary, itertools.islice(random_pixel_coords, len(hidden_img_binary))):
+    #     carrier_img[pos] = (carrier_img[pos] & ~1) | bit
+    #
+    # # Save the stego-image
+    # cv2.imwrite('stego_image.png', carrier_img)
 
 
 def extract(stego_img_path, position_sequences_path, secret_key):
-
     # Step 1:
     # Load the stego image and convert it to grayscale
     stego_img = cv2.imread(stego_img_path, cv2.IMREAD_GRAYSCALE)
@@ -104,6 +125,7 @@ def extract(stego_img_path, position_sequences_path, secret_key):
     # Save the hidden image in the root directory of the project
     cv2.imwrite('hidden_image.png', hidden_img)
 
+
 def main():
     operation = input("Choose operation ('embed' or 'extract'): ")
     if operation == 'embed':
@@ -116,6 +138,7 @@ def main():
         position_sequences_path = input("Enter path to position sequences txt file: ")
         secret_key = input("Enter secret key: ")
         extract(stego_img_path, position_sequences_path, secret_key)
+
 
 if __name__ == "__main__":
     main()
