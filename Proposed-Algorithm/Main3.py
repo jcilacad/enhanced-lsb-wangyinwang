@@ -73,26 +73,24 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     carrier_img = cv2.imread(carrier_img_path, cv2.IMREAD_COLOR)
     hidden_img = cv2.imread(hidden_img_path, cv2.IMREAD_GRAYSCALE)
 
+    print("Original Hidden Image - Total Pixel Size - ", (hidden_img.shape[0] * hidden_img.shape[1]))
+
     # Adjust the key length to 16
     secret_key = adjust_key_length(secret_key)
 
     # FIXME: Encrypt the hidden image
     encrypted_hidden_img, original_shape = encrypt_image(hidden_img, secret_key)
 
-    # Compress the encrypted image using LZW Compression
+    print("Encrypted Hidden Image - Total Pixel Size - ", len(encrypted_hidden_img))
+
+    # FIXME: Compress the encrypted image using LZW Compression
     compressed_hidden_img, original_shape = lzw_compress((encrypted_hidden_img, original_shape))
 
-    print(len(encrypted_hidden_img))
+    print("Compressed Hidden Image - Total Pixel Size - ", len(compressed_hidden_img))
 
 
-
-
-
-
-    # print(len(compressed_hidden_img))
-
-    # # Ensure the hidden image is not larger than the carrier image
-    # assert hidden_img.size <= carrier_img.size, "The hidden image is larger than the carrier image"
+    # FIXME: Ensure the compressed image is not larger than the carrier image
+    assert len(compressed_hidden_img) <= carrier_img.size, "The hidden image is larger than the carrier image"
     #
     # # Step 2:
     # # Convert the hidden image to a binary stream
