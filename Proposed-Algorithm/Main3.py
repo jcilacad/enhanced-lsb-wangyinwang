@@ -19,8 +19,6 @@ def adjust_key_length(key):
         key = key[:16]
     return key
 
-
-# Encrypt hidden image
 def encrypt_image(img, key):
     img_data = img.tobytes()
 
@@ -31,8 +29,6 @@ def encrypt_image(img, key):
 
     return encrypted_img, img.shape
 
-
-# Decrypt hidden image
 def decrypt_image(encrypted_img, original_shape, key):
     encrypted_data = encrypted_img.tobytes()
 
@@ -44,43 +40,48 @@ def decrypt_image(encrypted_img, original_shape, key):
 
     return decrypted_img, decrypted_img.shape
 
-
 def lzw_compress(input_tuple):
     input_array, shape = input_tuple
     input_bytes = input_array.tobytes()
     dictionary = {bytes([i]): i for i in range(256)}
     current_bytes = bytes()
-    compressed_data = []
+    compressed_data = bytearray()
 
     for byte in input_bytes:
         new_bytes = current_bytes + bytes([byte])
         if new_bytes in dictionary:
             current_bytes = new_bytes
         else:
-            compressed_data.append(dictionary[current_bytes])
-            dictionary[new_bytes] = len(dictionary)
+            if len(dictionary) < 65536:  # Limit the size of the dictionary
+                dictionary[new_bytes] = len(dictionary)
+            compressed_data.extend(dictionary[current_bytes].to_bytes(2, 'big'))
             current_bytes = bytes([byte])
 
     if current_bytes:
-        compressed_data.append(dictionary[current_bytes])
+        compressed_data.extend(dictionary[current_bytes].to_bytes(2, 'big'))
 
-    return compressed_data, shape
-
+    return np.frombuffer(compressed_data, dtype=np.uint8), shape
 
 def lzw_decompress(input_tuple):
     compressed_data, shape = input_tuple
     dictionary = {i: bytes([i]) for i in range(256)}
-    current_bytes = bytes([compressed_data[0]])
+    compressed_data = iter(compressed_data)
+
+    # Read the first two bytes from the compressed data
+    code = int.from_bytes(bytes([next(compressed_data), next(compressed_data)]), 'big')
+    current_bytes = dictionary[code]
     decompressed_data = list(current_bytes)
 
-    for code in compressed_data[1:]:
+    for high_byte, low_byte in zip(compressed_data, compressed_data):
+        code = int.from_bytes(bytes([high_byte, low_byte]), 'big')
         if code not in dictionary:
             new_bytes = current_bytes + current_bytes[:1]
         else:
             new_bytes = dictionary[code]
 
         decompressed_data.extend(new_bytes)
-        dictionary[len(dictionary)] = current_bytes + new_bytes[:1]
+        if len(dictionary) < 65536:  # Limit the size of the dictionary
+            dictionary[len(dictionary)] = current_bytes + new_bytes[:1]
         current_bytes = new_bytes
 
     decompressed_array = np.frombuffer(bytes(decompressed_data), dtype=np.uint8)
@@ -89,7 +90,6 @@ def lzw_decompress(input_tuple):
     return decompressed_array
 
 
-# Embedding Process
 def embed(carrier_img_path, hidden_img_path, secret_key):
     # FIXME: Remove the conversion of carrier image to grayscale
     carrier_img = cv2.imread(carrier_img_path, cv2.IMREAD_COLOR)
@@ -97,7 +97,6 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
     print("Original Hidden Image - Total Pixel Size - ", (hidden_img.shape[0] * hidden_img.shape[1]))
 
-    # Adjust the key length to 16
     secret_key = adjust_key_length(secret_key)
 
     # FIXME: Encrypt the hidden image
@@ -110,54 +109,77 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
     print("Compressed Hidden Image - Total Pixel Size - ", len(compressed_hidden_img))
 
+    # TODO: Use this for compression process
+    decompressed_hidden_img = lzw_decompress((compressed_hidden_img, len(encrypted_hidden_img)))
+
+    print("Decompressed Hidden Image - Total Pixel Size - ", len(decompressed_hidden_img))
+
+    # TODO: Use this for decryption process
+    decrypted_img, decrypted_shape = decrypt_image(encrypted_hidden_img, original_shape, secret_key)
+
+    print("Decrypted Hidden Image - Total Pixel Size - ", (decrypted_img.shape[0] * decrypted_shape[1]))
+
     # FIXME: Ensure the compressed image is not larger than the carrier image
     assert len(compressed_hidden_img) <= carrier_img.size, "The hidden image is larger than the carrier image"
 
     # Step 2: Convert the hidden image to a binary stream
-    compressed_hidden_img_binary = np.unpackbits(compressed_hidden_img)
+    # compressed_hidden_img_binary = np.unpackbits(compressed_hidden_img)
+    compressed_hidden_img_uint8 = np.array(compressed_hidden_img, dtype=np.uint8)
+    compressed_hidden_img_binary = np.unpackbits(compressed_hidden_img_uint8)
 
-    # Steps 3 & 4:
-    # Generate a list of all pixel coordinates in the carrier image
+    # Steps 3 & 4: Generate a list of all pixel coordinates in the carrier image
     pixel_coords = [(i, j) for i in range(carrier_img.shape[0]) for j in range(carrier_img.shape[1])]
 
-    # Step 5:
-    # Generate a random sequence of list from pixel_coords
+    # Step 5: Generate a random sequence of list from pixel_coords
     random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
 
+    # Pixels to embed from hidden image to carrier image
+    sliced_pixel_coords = itertools.islice(random_pixel_coords, len(compressed_hidden_img_binary))
 
-    # TODO: Add the len(encrypted_hidden_img) to the 2nd line of txt file for compression purposes
-    #
-    # # Step 2:
-    # # Convert the hidden image to a binary stream
-    # hidden_img_binary = np.unpackbits(hidden_img)
-    #
-    # # Steps 3 & 4:
-    # # Generate a list of all pixel coordinates in the carrier image
-    # pixel_coords = [(i, j) for i in range(carrier_img.shape[0]) for j in range(carrier_img.shape[1])]
-    #
-    # # Step 5:
-    # # Generate a random sequence of list from pixel_coords
-    # random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
-    #
-    # # Pixels to embed from hidden image to carrier image
-    # sliced_pixel_coords = itertools.islice(random_pixel_coords, len(hidden_img_binary))
-    #
-    # # Save the position sequences to a txt file
-    # with open('position_sequences.txt', 'w') as f:
-    #     # Write the number of rows and columns to the first line
-    #     f.write(f'{hidden_img.shape[0]} {hidden_img.shape[1]}\n')
-    #
-    #     # Write the position sequences
-    #     for pos in sliced_pixel_coords:
-    #         f.write(f'{pos[0]} {pos[1]}\n')
-    #
-    # # Step 6:
-    # # Embed the hidden image into the carrier image
-    # for bit, pos in zip(hidden_img_binary, itertools.islice(random_pixel_coords, len(hidden_img_binary))):
-    #     carrier_img[pos] = (carrier_img[pos] & ~1) | bit
-    #
-    # # Save the stego-image
-    # cv2.imwrite('stego_image.png', carrier_img)
+    # TODO: Add the len(encrypted_hidden_img) to the 2nd line of txt file for decompression purposes
+    # Save the position sequences to a txt file
+    with open('position_sequences.txt', 'w') as f:
+        # Write the number of rows and columns to the first line
+        f.write(f'{hidden_img.shape[0]} {hidden_img.shape[1]}\n')
+        f.write(f'{len(encrypted_hidden_img)}\n')
+
+        # Write the position sequences
+        for pos in sliced_pixel_coords:
+            f.write(f'{pos[0]} {pos[1]}\n')
+
+    # TODO: Check if the image is grayscale or RGB
+    if carrier_img is not None:
+        if len(carrier_img.shape) == 2 or (
+                len(carrier_img.shape) == 3 and np.all(carrier_img[:, :, 0] == carrier_img[:, :, 1]) and np.all(
+            carrier_img[:, :, 0] == carrier_img[:, :, 2])):
+
+            print("The image is 8-bit grayscale.")
+            for bit, pos in zip(compressed_hidden_img_binary, itertools.islice(random_pixel_coords, len(compressed_hidden_img_binary))):
+                carrier_img[pos] = (carrier_img[pos] & ~1) | bit
+
+            # Save the stego-image
+            cv2.imwrite('stego_image.png', carrier_img)
+        elif len(carrier_img.shape) == 3:
+
+            print("The image is 24-bit RGB.")
+
+            # Embed the hidden image into the carrier image
+            # for i in range(0, len(compressed_img_bin), 8):
+            #     bits = compressed_img_bin[i:i + 8]
+            #     red_bits, blue_bits, green_bits = bits[:3], bits[3:5], bits[5:]
+            #     red = int(''.join(map(str, red_bits)), 2)
+            #     blue = int(''.join(map(str, blue_bits)), 2)
+            #     green = int(''.join(map(str, green_bits)), 2)
+            #     pos = random_pixel_coords[i // 8]
+            #     carrier_img[pos] = (carrier_img[pos] & np.array([~7, ~3, ~7])) | np.array([red, blue, green])
+            #
+            # # Save the stego-image
+            # cv2.imwrite('stego_image.png', carrier_img)
+        else:
+            print("The image is neither 8-bit grayscale nor 24-bit RGB.")
+            raise ValueError("The image is neither 8-bit grayscale nor 24-bit RGB.")
+    else:
+        print("The image could not be read.")
 
 
 def extract(stego_img_path, position_sequences_path, secret_key):
