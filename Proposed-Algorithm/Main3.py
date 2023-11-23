@@ -67,6 +67,28 @@ def lzw_compress(input_tuple):
     return compressed_data, shape
 
 
+def lzw_decompress(input_tuple):
+    compressed_data, shape = input_tuple
+    dictionary = {i: bytes([i]) for i in range(256)}
+    current_bytes = bytes([compressed_data[0]])
+    decompressed_data = list(current_bytes)
+
+    for code in compressed_data[1:]:
+        if code not in dictionary:
+            new_bytes = current_bytes + current_bytes[:1]
+        else:
+            new_bytes = dictionary[code]
+
+        decompressed_data.extend(new_bytes)
+        dictionary[len(dictionary)] = current_bytes + new_bytes[:1]
+        current_bytes = new_bytes
+
+    decompressed_array = np.frombuffer(bytes(decompressed_data), dtype=np.uint8)
+    decompressed_array = decompressed_array.reshape(shape)
+
+    return decompressed_array
+
+
 # Embedding Process
 def embed(carrier_img_path, hidden_img_path, secret_key):
     # FIXME: Remove the conversion of carrier image to grayscale
@@ -89,8 +111,12 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     print("Compressed Hidden Image - Total Pixel Size - ", len(compressed_hidden_img))
 
 
+
     # FIXME: Ensure the compressed image is not larger than the carrier image
     assert len(compressed_hidden_img) <= carrier_img.size, "The hidden image is larger than the carrier image"
+
+
+    # TODO: Add the len(encrypted_hidden_img) to the 2nd line of txt file for compression purposes
     #
     # # Step 2:
     # # Convert the hidden image to a binary stream
@@ -126,10 +152,18 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
 
 def extract(stego_img_path, position_sequences_path, secret_key):
+    # TODO: Use this for compression process
+    # decompressed_hidden_img = lzw_decompress((compressed_hidden_img,
+    #                                           (len(encrypted_hidden_img))))
+    #
+    # print("Decompressed Hidden Image - Total Pixel Size - ", len(decompressed_hidden_img))
+
+
     # TODO: Use this for decryption process
     # decrypted_img, decrypted_shape = decrypt_image(encrypted_hidden_img, original_shape, secret_key)
     #
     # print(decrypted_img)
+
     #
     # bit_image = np.unpackbits(decrypted_img)
     # print(bit_image)
