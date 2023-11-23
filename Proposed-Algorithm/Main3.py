@@ -3,6 +3,24 @@ import cv2
 import random
 import itertools
 
+from Crypto.Cipher import AES
+
+
+def pad(data):
+    return data + b"\x00" * (16 - len(data) % 16)
+
+def encrypt_image(image_path, key):
+    img = cv2.imread(image_path)
+    img_data = img.tostring()
+
+    cipher = AES.new(key, AES.MODE_ECB)
+    encrypted_data = cipher.encrypt(pad(img_data))
+
+    encrypted_img = np.frombuffer(encrypted_data, dtype=np.uint8)
+    encrypted_img = encrypted_img.reshape(img.shape)
+
+    return encrypted_img
+
 def embed(carrier_img_path, hidden_img_path, secret_key):
 
     # Step 1:
@@ -12,7 +30,8 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     carrier_img = cv2.imread(carrier_img_path, cv2.IMREAD_COLOR)
     hidden_img = cv2.imread(hidden_img_path, cv2.IMREAD_GRAYSCALE)
 
-
+    # FIXME: Encrypt hidden image using AES-128
+    encrypted_hidden_img = encrypt_image(hidden_img_path, secret_key)
 
     # Ensure the hidden image is not larger than the carrier image
     assert hidden_img.size <= carrier_img.size, "The hidden image is larger than the carrier image"
