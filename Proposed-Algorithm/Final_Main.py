@@ -241,6 +241,9 @@ def extract(stego_img_path, position_sequences_path, secret_key):
     # Load the stego image
     stego_img = cv2.imread(stego_img_path, cv2.IMREAD_COLOR)
 
+    # Adjust key to make it 16 bytes
+    secret_key = adjust_key_length(secret_key)
+
     # Step 2: Load the position sequences from the text file
     with open(position_sequences_path, 'r') as f:
         # Read the first line and split it into rows and columns
@@ -289,10 +292,8 @@ def extract(stego_img_path, position_sequences_path, secret_key):
 
             print("Decompressed Hidden Image - Total Pixel Size - ", len(decompressed_hidden_img))
 
-            # Adjust key to make it 16 bytes
-            secret_key = adjust_key_length(secret_key)
 
-            # TODO: Encrypt the decompressed hidden image using AES-128
+            # TODO: Decrypt the decompressed hidden image using AES-128
             decrypted_img, decrypted_shape = decrypt_image(decompressed_hidden_img, (rows, cols), secret_key)
 
             print("Decrypted Hidden Image - Total Pixel Size - ", (decrypted_shape[0] * decrypted_shape[1]))
@@ -312,10 +313,21 @@ def extract(stego_img_path, position_sequences_path, secret_key):
                 print(bits)
                 compressed_img_bin += ''.join(map(str, bits))
 
+            # TODO: Convert binaries to image
             compressed_img_bytes = [int(compressed_img_bin[i:i + 8], 2) for i in range(0, len(compressed_img_bin), 8)]
             compressed_img_array = np.array(compressed_img_bytes, dtype=np.uint8)
 
-            print(len(compressed_img_array))
+            print("Retrieved compressed image - Total pixel Size- ", len(compressed_img_array))
+
+            # TODO: Decompress hidden image using LZW compression
+            decompressed_hidden_img = lzw_decompress((compressed_img_array, encrypted_img_length))
+
+            print("Decompressed Hidden Image - Total Pixel Size - ", len(decompressed_hidden_img))
+
+            # TODO: Decrypt the decompressed hidden image using AES-128
+            decrypted_img, decrypted_shape = decrypt_image(decompressed_hidden_img, (rows, cols), secret_key)
+
+            print("Decrypted Hidden Image - Total Pixel Size - ", (decrypted_shape[0] * decrypted_shape[1]))
 
 
 
