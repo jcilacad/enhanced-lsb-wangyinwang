@@ -62,7 +62,6 @@ def extract(stego_img_path, position_sequences_path):
 
         # Read the remaining lines as position sequences
         position_sequences = [tuple(map(int, line.strip().split())) for line in f]
-        print("Position Sequences", position_sequences)
 
     # Step 3:
     # Extract the binary digital stream of the hidden image
@@ -73,7 +72,6 @@ def extract(stego_img_path, position_sequences_path):
         padding = np.zeros(8 - hidden_img_binary.size % 8, dtype=np.uint8)
         hidden_img_binary = np.concatenate((hidden_img_binary, padding))
 
-    print(hidden_img_binary)
 
     # Step 4:
     # Convert the binary digital stream back into pixel form
