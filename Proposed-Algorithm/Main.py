@@ -1,9 +1,6 @@
-import numpy as np
-import cv2
 import random
 import itertools
 
-from PIL import Image
 from Crypto.Cipher import AES
 import cv2
 import numpy as np
@@ -221,21 +218,6 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
 
 def extract(stego_img_path, position_sequences_path, secret_key):
-    # TODO: Use this for compression process
-    # decompressed_hidden_img = lzw_decompress((compressed_hidden_img,
-    #                                           (len(encrypted_hidden_img))))
-    #
-    # print("Decompressed Hidden Image - Total Pixel Size - ", len(decompressed_hidden_img))
-
-    # TODO: Use this for decryption process
-    # decrypted_img, decrypted_shape = decrypt_image(encrypted_hidden_img, original_shape, secret_key)
-    #
-    # print(decrypted_img)
-
-    #
-    # bit_image = np.unpackbits(decrypted_img)
-    # print(bit_image)
-    # print(decrypted_img)
 
     # Step 1:
     # Load the stego image
