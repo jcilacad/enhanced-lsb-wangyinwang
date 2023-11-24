@@ -115,7 +115,7 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     print("Decompressed Hidden Image - Total Pixel Size - ", len(decompressed_hidden_img))
 
     # TODO: Use this for decryption process
-    decrypted_img, decrypted_shape = decrypt_image(encrypted_hidden_img, original_shape, secret_key)
+    decrypted_img, decrypted_shape = decrypt_image(decompressed_hidden_img, original_shape, secret_key)
 
     print("Decrypted Hidden Image - Total Pixel Size - ", (decrypted_img.shape[0] * decrypted_shape[1]))
 
@@ -123,7 +123,6 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     assert len(compressed_hidden_img) <= carrier_img.size, "The hidden image is larger than the carrier image"
 
     # Step 2: Convert the hidden image to a binary stream
-    # compressed_hidden_img_binary = np.unpackbits(compressed_hidden_img)
     compressed_hidden_img_uint8 = np.array(compressed_hidden_img, dtype=np.uint8)
     compressed_hidden_img_binary = np.unpackbits(compressed_hidden_img_uint8)
 
@@ -200,14 +199,20 @@ def extract(stego_img_path, position_sequences_path, secret_key):
     # print(decrypted_img)
 
     # Step 1:
-    # Load the stego image and convert it to grayscale
-    stego_img = cv2.imread(stego_img_path, cv2.IMREAD_GRAYSCALE)
+    # Load the stego image
+    stego_img = cv2.imread(stego_img_path, cv2.IMREAD_COLOR)
 
     # Step 2:
     # Load the position sequences from the text file
     with open(position_sequences_path, 'r') as f:
         # Read the first line and split it into rows and columns
         rows, cols = map(int, next(f).strip().split())
+
+        # Read the second line
+        second_line = next(f).strip()
+
+        # If you want to convert it to an integer
+        encrypted_img_length = int(second_line)
 
         # Read the remaining lines as position sequences
         position_sequences = [tuple(map(int, line.strip().split())) for line in f]
