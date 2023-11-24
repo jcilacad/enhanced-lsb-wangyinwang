@@ -171,40 +171,43 @@ def extract(stego_img_path, position_sequences_path, encryption_key):
                 padding = np.zeros(8 - hidden_img_binary.size % 8, dtype=np.uint8)
                 hidden_img_binary = np.concatenate((hidden_img_binary, padding))
 
-            # Convert hidden image binary to bytes
-            hidden_img_bytes = hidden_img_binary.tobytes()
 
-            # Decompress hidden img bytes
-            decompressed_img_bytes = lzw_decompress(hidden_img_bytes)
+            print(hidden_img_binary)
 
-            key = SHA256.new(encryption_key.encode()).digest()[:16]
-
-            # Create a new AES cipher object with the hashed key
-            cipher = AES.new(key, AES.MODE_CBC)
-
-            # Decrypt the decompressed bytes
-            decrypted_img_bytes = cipher.decrypt(decompressed_img_bytes)
-
-            # Unpad the decrypted bytes
-            unpadded_img_bytes = unpad(decrypted_img_bytes, 16)
-
-            decrypted_img_bin_n_array = ''.join(format(byte, '08b') for byte in unpadded_img_bytes)
-
-            # Convert the binary string into an array of individual bits
-            decrypted_img_bin_array = [int(bit) for bit in decrypted_img_bin_n_array]
-
-            # Convert list to numpy array
-            hidden_img_binary = np.array(decrypted_img_bin_array)
-
-            # Step 4:
-            # Convert the binary digital stream back into pixel form
-            hidden_img_pixels = np.packbits(hidden_img_binary)
-            # Step 5:
-            # Reshape the pixel data to form the hidden image
-            hidden_img = np.reshape(hidden_img_pixels, (rows, cols))
-
-            # Save the hidden image in the root directory of the project
-            cv2.imwrite('hidden_image.png', hidden_img)
+            # # Convert hidden image binary to bytes
+            # hidden_img_bytes = hidden_img_binary.tobytes()
+            #
+            # # Decompress hidden img bytes
+            # decompressed_img_bytes = lzw_decompress(hidden_img_bytes)
+            #
+            # key = SHA256.new(encryption_key.encode()).digest()[:16]
+            #
+            # # Create a new AES cipher object with the hashed key
+            # cipher = AES.new(key, AES.MODE_CBC)
+            #
+            # # Decrypt the decompressed bytes
+            # decrypted_img_bytes = cipher.decrypt(decompressed_img_bytes)
+            #
+            # # Unpad the decrypted bytes
+            # unpadded_img_bytes = unpad(decrypted_img_bytes, 16)
+            #
+            # decrypted_img_bin_n_array = ''.join(format(byte, '08b') for byte in unpadded_img_bytes)
+            #
+            # # Convert the binary string into an array of individual bits
+            # decrypted_img_bin_array = [int(bit) for bit in decrypted_img_bin_n_array]
+            #
+            # # Convert list to numpy array
+            # hidden_img_binary = np.array(decrypted_img_bin_array)
+            #
+            # # Step 4:
+            # # Convert the binary digital stream back into pixel form
+            # hidden_img_pixels = np.packbits(hidden_img_binary)
+            # # Step 5:
+            # # Reshape the pixel data to form the hidden image
+            # hidden_img = np.reshape(hidden_img_pixels, (rows, cols))
+            #
+            # # Save the hidden image in the root directory of the project
+            # cv2.imwrite('hidden_image.png', hidden_img)
 
         elif len(stego_img.shape) == 3:
 

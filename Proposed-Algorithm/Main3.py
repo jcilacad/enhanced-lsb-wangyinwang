@@ -19,6 +19,7 @@ def adjust_key_length(key):
         key = key[:16]
     return key
 
+
 def encrypt_image(img, key):
     img_data = img.tobytes()
 
@@ -28,6 +29,7 @@ def encrypt_image(img, key):
     encrypted_img = np.frombuffer(encrypted_data, dtype=np.uint8)
 
     return encrypted_img, img.shape
+
 
 def decrypt_image(encrypted_img, original_shape, key):
     encrypted_data = encrypted_img.tobytes()
@@ -39,6 +41,7 @@ def decrypt_image(encrypted_img, original_shape, key):
     decrypted_img = decrypted_img.reshape(original_shape)
 
     return decrypted_img, decrypted_img.shape
+
 
 def lzw_compress(input_tuple):
     input_array, shape = input_tuple
@@ -61,6 +64,7 @@ def lzw_compress(input_tuple):
         compressed_data.extend(dictionary[current_bytes].to_bytes(2, 'big'))
 
     return np.frombuffer(compressed_data, dtype=np.uint8), shape
+
 
 def lzw_decompress(input_tuple):
     compressed_data, shape = input_tuple
@@ -141,6 +145,7 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
         # Write the number of rows and columns to the first line
         f.write(f'{hidden_img.shape[0]} {hidden_img.shape[1]}\n')
         f.write(f'{len(encrypted_hidden_img)}\n')
+        f.write(f'{len(compressed_hidden_img)}\n')
 
         # Write the position sequences
         for pos in sliced_pixel_coords:
@@ -153,7 +158,8 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
             carrier_img[:, :, 0] == carrier_img[:, :, 2])):
 
             print("The image is 8-bit grayscale.")
-            for bit, pos in zip(compressed_hidden_img_binary, itertools.islice(random_pixel_coords, len(compressed_hidden_img_binary))):
+            for bit, pos in zip(compressed_hidden_img_binary,
+                                itertools.islice(random_pixel_coords, len(compressed_hidden_img_binary))):
                 carrier_img[pos] = (carrier_img[pos] & ~1) | bit
 
             # Save the stego-image
@@ -202,8 +208,7 @@ def extract(stego_img_path, position_sequences_path, secret_key):
     # Load the stego image
     stego_img = cv2.imread(stego_img_path, cv2.IMREAD_COLOR)
 
-    # Step 2:
-    # Load the position sequences from the text file
+    # Step 2: Load the position sequences from the text file
     with open(position_sequences_path, 'r') as f:
         # Read the first line and split it into rows and columns
         rows, cols = map(int, next(f).strip().split())
@@ -211,31 +216,61 @@ def extract(stego_img_path, position_sequences_path, secret_key):
         # Read the second line
         second_line = next(f).strip()
 
-        # If you want to convert it to an integer
+        # Convert it to an integer
         encrypted_img_length = int(second_line)
+
+        # Read the third line
+        third_line = next(f).strip()
+
+        # Split the line into parts and convert each part to an integer
+        compressed_img_length = int(third_line)
 
         # Read the remaining lines as position sequences
         position_sequences = [tuple(map(int, line.strip().split())) for line in f]
-        print("Position Sequences", position_sequences)
 
-    # Step 3:
-    # Extract the binary digital stream of the hidden image
-    hidden_img_binary = np.array([stego_img[pos] & 1 for pos in position_sequences])
+    # Check if the stego image is 8-bit grayscale or 24-bit rgb image
+    if stego_img is not None:
+        if len(stego_img.shape) == 2 or (
+                len(stego_img.shape) == 3 and np.all(stego_img[:, :, 0] == stego_img[:, :, 1]) and np.all(
+            stego_img[:, :, 0] == stego_img[:, :, 2])):
 
-    # Ensure that the length of hidden_img_binary is a multiple of 8
-    if hidden_img_binary.size % 8 != 0:
-        padding = np.zeros(8 - hidden_img_binary.size % 8, dtype=np.uint8)
-        hidden_img_binary = np.concatenate((hidden_img_binary, padding))
+            print("The image is 8-bit grayscale.")
 
-    # Step 4:
-    # Convert the binary digital stream back into pixel form
-    hidden_img_pixels = np.packbits(hidden_img_binary)
-    # Step 5:
-    # Reshape the pixel data to form the hidden image
-    hidden_img = np.reshape(hidden_img_pixels, (rows, cols))
+            stego_img = cv2.imread(stego_img_path, cv2.IMREAD_GRAYSCALE)
 
-    # Save the hidden image in the root directory of the project
-    cv2.imwrite('hidden_image.png', hidden_img)
+            # Step 3:
+            # Extract the binary digital stream of the hidden image
+            hidden_img_binary = np.array([stego_img[pos] & 1 for pos in position_sequences])
+
+            print(hidden_img_binary)
+
+
+            # Ensure that the length of hidden_img_binary is a multiple of 8
+            if hidden_img_binary.size % 8 != 0:
+                padding = np.zeros(8 - hidden_img_binary.size % 8, dtype=np.uint8)
+                hidden_img_binary = np.concatenate((hidden_img_binary, padding))
+
+
+            # print(hidden_img_binary)
+            # Convert hidden image binary to bytes
+            hidden_img_bytes = hidden_img_binary.tobytes()
+
+
+
+
+
+        elif len(stego_img.shape) == 3:
+
+            print("The image is 24-bit RGB.")
+
+
+        else:
+
+            print("The image is neither 8-bit grayscale nor 24-bit RGB.")
+
+    else:
+
+        print("The image could not be read.")
 
 
 def main():

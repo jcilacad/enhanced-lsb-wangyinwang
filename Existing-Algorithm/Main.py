@@ -25,6 +25,8 @@ def embed(carrier_img_path, hidden_img_path):
     # Generate a random sequence of list from pixel_coords
     random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
 
+    print(hidden_img_binary)
+
     # Pixels to embed from hidden image to carrier image
     sliced_pixel_coords = itertools.islice(random_pixel_coords, len(hidden_img_binary))
 
@@ -70,6 +72,8 @@ def extract(stego_img_path, position_sequences_path):
     if hidden_img_binary.size % 8 != 0:
         padding = np.zeros(8 - hidden_img_binary.size % 8, dtype=np.uint8)
         hidden_img_binary = np.concatenate((hidden_img_binary, padding))
+
+    print(hidden_img_binary)
 
     # Step 4:
     # Convert the binary digital stream back into pixel form
