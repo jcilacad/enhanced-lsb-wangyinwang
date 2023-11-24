@@ -184,10 +184,11 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
             print("The image is 24-bit RGB.")
 
             # TODO: Divide the hidden binary length to 8 for rgb image that has 8 bits per pixel
-            txt_hidden_img_binary_length = int(len(compressed_hidden_img_binary) / 8.0)
 
             # Pixels to embed from hidden image to carrier image
-            sliced_pixel_coords = itertools.islice(random_pixel_coords, int(txt_hidden_img_binary_length / 8))
+            sliced_pixel_coords = itertools.islice(random_pixel_coords, len(compressed_hidden_img))
+
+
 
             # TODO: Save the position sequences to a txt file
             with open('position_sequences.txt', 'w') as f:
@@ -303,6 +304,20 @@ def extract(stego_img_path, position_sequences_path, secret_key):
         elif len(stego_img.shape) == 3:
 
             print("The image is 24-bit RGB.")
+
+            compressed_img_bin = ''
+            for pos in itertools.islice(position_sequences, np.prod(compressed_img_length)):
+                red, blue, green = stego_img[pos] & np.array([7, 3, 7])
+                bits = list(map(int, format(red, '03b') + format(blue, '02b') + format(green, '03b')))
+                print(bits)
+                compressed_img_bin += ''.join(map(str, bits))
+
+            compressed_img_bytes = [int(compressed_img_bin[i:i + 8], 2) for i in range(0, len(compressed_img_bin), 8)]
+            compressed_img_array = np.array(compressed_img_bytes, dtype=np.uint8)
+
+            print(len(compressed_img_array))
+
+
 
 
         else:
