@@ -329,8 +329,8 @@ def extract(stego_img_path, position_sequences_path, secret_key):
 
             print("Decrypted Hidden Image - Total Pixel Size - ", (decrypted_shape[0] * decrypted_shape[1]))
 
-
-
+            # TODO: Save the hidden image in the root directory of the project
+            cv2.imwrite('hidden_image.png', decrypted_img)
 
         else:
 
