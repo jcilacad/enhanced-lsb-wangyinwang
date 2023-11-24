@@ -151,21 +151,6 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     # Step 5: Generate a random sequence of list from pixel_coords
     random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
 
-    # Pixels to embed from hidden image to carrier image
-    sliced_pixel_coords = itertools.islice(random_pixel_coords, len(compressed_hidden_img_binary))
-
-    # TODO: Add the len(encrypted_hidden_img) to the 2nd line of txt file for decompression purposes
-    # Save the position sequences to a txt file
-    with open('position_sequences.txt', 'w') as f:
-        # Write the number of rows and columns to the first line
-        f.write(f'{hidden_img.shape[0]} {hidden_img.shape[1]}\n')
-        f.write(f'{len(encrypted_hidden_img)}\n')
-        f.write(f'{len(compressed_hidden_img)}\n')
-
-        # Write the position sequences
-        for pos in sliced_pixel_coords:
-            f.write(f'{pos[0]} {pos[1]}\n')
-
     # TODO: Check if the image is grayscale or RGB
     if carrier_img is not None:
         if len(carrier_img.shape) == 2 or (
@@ -173,6 +158,21 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
             carrier_img[:, :, 0] == carrier_img[:, :, 2])):
 
             print("The image is 8-bit grayscale.")
+
+            # Pixels to embed from hidden image to carrier image
+            sliced_pixel_coords = itertools.islice(random_pixel_coords, len(compressed_hidden_img_binary))
+
+            # TODO:Save the position sequences to a txt file
+            with open('position_sequences.txt', 'w') as f:
+                # Write the number of rows and columns to the first line
+                f.write(f'{hidden_img.shape[0]} {hidden_img.shape[1]}\n')
+                f.write(f'{len(encrypted_hidden_img)}\n')
+                f.write(f'{len(compressed_hidden_img)}\n')
+
+                # Write the position sequences
+                for pos in sliced_pixel_coords:
+                    f.write(f'{pos[0]} {pos[1]}\n')
+
             for bit, pos in zip(compressed_hidden_img_binary,
                                 itertools.islice(random_pixel_coords, len(compressed_hidden_img_binary))):
                 carrier_img[pos] = (carrier_img[pos] & ~1) | bit
@@ -183,18 +183,35 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
             print("The image is 24-bit RGB.")
 
-            # Embed the hidden image into the carrier image
-            # for i in range(0, len(compressed_img_bin), 8):
-            #     bits = compressed_img_bin[i:i + 8]
-            #     red_bits, blue_bits, green_bits = bits[:3], bits[3:5], bits[5:]
-            #     red = int(''.join(map(str, red_bits)), 2)
-            #     blue = int(''.join(map(str, blue_bits)), 2)
-            #     green = int(''.join(map(str, green_bits)), 2)
-            #     pos = random_pixel_coords[i // 8]
-            #     carrier_img[pos] = (carrier_img[pos] & np.array([~7, ~3, ~7])) | np.array([red, blue, green])
-            #
-            # # Save the stego-image
-            # cv2.imwrite('stego_image.png', carrier_img)
+            # TODO: Divide the hidden binary length to 8 for rgb image that has 8 bits per pixel
+            txt_hidden_img_binary_length = int(len(compressed_hidden_img_binary) / 8.0)
+
+            # Pixels to embed from hidden image to carrier image
+            sliced_pixel_coords = itertools.islice(random_pixel_coords, int(txt_hidden_img_binary_length / 8))
+
+            # TODO: Save the position sequences to a txt file
+            with open('position_sequences.txt', 'w') as f:
+                # Write the number of rows and columns to the first line
+                f.write(f'{hidden_img.shape[0]} {hidden_img.shape[1]}\n')
+                f.write(f'{len(encrypted_hidden_img)}\n')
+                f.write(f'{len(compressed_hidden_img)}\n')
+
+                # Write the position sequences
+                for pos in sliced_pixel_coords:
+                    f.write(f'{pos[0]} {pos[1]}\n')
+
+            # TODO: Embed the hidden image into the carrier image
+            for i in range(0, len(compressed_hidden_img_binary), 8):
+                bits = compressed_hidden_img_binary[i:i + 8]
+                red_bits, blue_bits, green_bits = bits[:3], bits[3:5], bits[5:]
+                red = int(''.join(map(str, red_bits)), 2)
+                blue = int(''.join(map(str, blue_bits)), 2)
+                green = int(''.join(map(str, green_bits)), 2)
+                pos = random_pixel_coords[i // 8]
+                carrier_img[pos] = (carrier_img[pos] & np.array([~7, ~3, ~7])) | np.array([red, blue, green])
+
+            # Save the stego-image
+            cv2.imwrite('stego_image.png', carrier_img)
         else:
             print("The image is neither 8-bit grayscale nor 24-bit RGB.")
             raise ValueError("The image is neither 8-bit grayscale nor 24-bit RGB.")
@@ -281,29 +298,6 @@ def extract(stego_img_path, position_sequences_path, secret_key):
 
             # TODO: Save the hidden image in the root directory of the project
             cv2.imwrite('hidden_image.png', decrypted_img)
-
-            # Convert the binary array to bytes
-            # hidden_img_bytes = np.packbits(hidden_img_binary)
-            #
-            # # Convert the byte array to a numpy array
-            # hidden_img_array = np.frombuffer(hidden_img_bytes, dtype=np.uint8)
-            #
-            # # Reshape the array into an image (replace 'width' and 'height' with the actual dimensions of your image)
-            # hidden_img_array = hidden_img_array.reshape((compressed_img_length, 1))
-            #
-            # # Create a PIL image from the array
-            # hidden_img = Image.fromarray(hidden_img_array, 'L')
-            #
-            # print(hidden_img_binary)
-            # print(len(hidden_img_binary))
-            # Convert hidden image binary to bytes
-
-            # decompressed_hidden_img = lzw_decompress((hidden_img_binary, encrypted_img_length))
-            #
-            # print(len(decompressed_hidden_img))
-
-
-
 
 
         elif len(stego_img.shape) == 3:
