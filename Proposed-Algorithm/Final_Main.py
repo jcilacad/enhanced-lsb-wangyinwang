@@ -277,7 +277,10 @@ def extract(stego_img_path, position_sequences_path, secret_key):
             # TODO: Encrypt the decompressed hidden image using AES-128
             decrypted_img, decrypted_shape = decrypt_image(decompressed_hidden_img, (rows, cols), secret_key)
 
-            print("Encrypted Hidden Image - Total Pixel Size - ", (decrypted_shape[0] * decrypted_shape[1]))
+            print("Decrypted Hidden Image - Total Pixel Size - ", (decrypted_shape[0] * decrypted_shape[1]))
+
+            # TODO: Save the hidden image in the root directory of the project
+            cv2.imwrite('hidden_image.png', decrypted_img)
 
             # Convert the binary array to bytes
             # hidden_img_bytes = np.packbits(hidden_img_binary)
