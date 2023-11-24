@@ -271,12 +271,13 @@ def extract(stego_img_path, position_sequences_path, secret_key):
 
             print("Decompressed Hidden Image - Total Pixel Size - ", len(decompressed_hidden_img))
 
-            
+            # Adjust key to make it 16 bytes
+            secret_key = adjust_key_length(secret_key)
 
+            # TODO: Encrypt the decompressed hidden image using AES-128
+            decrypted_img, decrypted_shape = decrypt_image(decompressed_hidden_img, (rows, cols), secret_key)
 
-
-            # # TODO: Use this for decryption process
-            # decrypted_img, decrypted_shape = decrypt_image(decompressed_hidden_img, original_shape, secret_key)
+            print("Encrypted Hidden Image - Total Pixel Size - ", (decrypted_shape[0] * decrypted_shape[1]))
 
             # Convert the binary array to bytes
             # hidden_img_bytes = np.packbits(hidden_img_binary)
