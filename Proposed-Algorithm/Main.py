@@ -124,17 +124,6 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
     print("Compressed Hidden Image - Total Pixel Size - ", len(compressed_hidden_img))
 
-    # TODO: Use this for compression process
-
-    decompressed_hidden_img = lzw_decompress((compressed_hidden_img, len(encrypted_hidden_img)))
-
-    print("Decompressed Hidden Image - Total Pixel Size - ", len(decompressed_hidden_img))
-
-    # TODO: Use this for decryption process
-    decrypted_img, decrypted_shape = decrypt_image(decompressed_hidden_img, original_shape, secret_key)
-
-    print("Decrypted Hidden Image - Total Pixel Size - ", (decrypted_img.shape[0] * decrypted_shape[1]))
-
     # FIXME: Ensure the compressed image is not larger than the carrier image
     assert len(compressed_hidden_img) <= carrier_img.size, "The hidden image is larger than the carrier image"
 
@@ -292,7 +281,6 @@ def extract(stego_img_path, position_sequences_path, secret_key):
             for pos in itertools.islice(position_sequences, np.prod(compressed_img_length)):
                 red, blue, green = stego_img[pos] & np.array([7, 3, 7])
                 bits = list(map(int, format(red, '03b') + format(blue, '02b') + format(green, '03b')))
-                print(bits)
                 compressed_img_bin += ''.join(map(str, bits))
 
             # TODO: Convert binaries to image
