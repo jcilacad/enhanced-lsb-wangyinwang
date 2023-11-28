@@ -7,6 +7,7 @@ def embed(carrier_img_path, hidden_img_path):
 
     # Step 1:
     # Read the images
+    # SOP 1:
     carrier_img = cv2.imread(carrier_img_path, cv2.IMREAD_GRAYSCALE)
     hidden_img = cv2.imread(hidden_img_path, cv2.IMREAD_GRAYSCALE)
 

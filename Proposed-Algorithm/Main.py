@@ -106,6 +106,8 @@ def binary_to_image(hidden_img_binary, shape):
 
 
 def embed(carrier_img_path, hidden_img_path, secret_key):
+    print("====================== Embedding Process ======================")
+
     # FIXME: Remove the conversion of carrier image to grayscale
     carrier_img = cv2.imread(carrier_img_path, cv2.IMREAD_COLOR)
     hidden_img = cv2.imread(hidden_img_path, cv2.IMREAD_GRAYSCALE)
@@ -137,13 +139,32 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     # Step 5: Generate a random sequence of list from pixel_coords
     random_pixel_coords = random.sample(pixel_coords, len(pixel_coords))
 
+    print("===============================================================")
+
     # TODO: Check if the image is grayscale or RGB
     if carrier_img is not None:
         if len(carrier_img.shape) == 2 or (
                 len(carrier_img.shape) == 3 and np.all(carrier_img[:, :, 0] == carrier_img[:, :, 1]) and np.all(
             carrier_img[:, :, 0] == carrier_img[:, :, 2])):
 
-            print("The image is 8-bit grayscale.")
+            print("The carrier image is 8-bit grayscale.")
+
+            # Get the dimensions of the image
+
+            # Calculate the total number of bits
+            total_bits = carrier_img.shape[0] * carrier_img.shape[1] * 8
+
+            # Total number of bits of hidden image
+            hidden_img_total_bits = len(compressed_hidden_img) * 8
+
+            # Total Number of Bits Available in the Carrier Image
+            available_bits = total_bits - hidden_img_total_bits
+
+            print(f"Total Number of Bits in the Carrier Image - {total_bits}.")
+
+            print(f"Total Number of Bits in the Hidden Image - {hidden_img_total_bits}")
+
+            print(f"Total Number of Bits Available in the Carrier Image - {available_bits}")
 
             # Pixels to embed from hidden image to carrier image
             sliced_pixel_coords = itertools.islice(random_pixel_coords, len(compressed_hidden_img_binary))
@@ -165,16 +186,39 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
             # Save the stego-image
             cv2.imwrite('stego_image.png', carrier_img)
+
+            print("\nSuccessfully embedded the hidden image")
+
         elif len(carrier_img.shape) == 3:
 
-            print("The image is 24-bit RGB.")
+            print("The carrier image is 24-bit RGB.")
+
+            # Get the dimensions of the image
+            height, width, _ = carrier_img.shape
+
+            # Calculate the total number of bits
+            total_bits = width * height * 24
+
+            # Total number of bits of hidden image
+            hidden_img_total_bits = len(compressed_hidden_img) * 8
+
+            # Total Number of Bits Available in the Carrier Image
+            available_bits = total_bits - hidden_img_total_bits
+
+            print(f"Total Number of Bits in the Carrier Image - {total_bits}.")
+
+            print(f"Total Number of Bits in the Hidden Image - {hidden_img_total_bits}")
+
+            print(f"Total Number of Bits Available in the Carrier Image - {available_bits}")
+
+            print(f"Carrier Image Total Number of Bits - {total_bits}")
+
+            print(f"Hidden Image Total Number of Bits - {len(compressed_hidden_img) * 8}")
 
             # TODO: Divide the hidden binary length to 8 for rgb image that has 8 bits per pixel
 
             # Pixels to embed from hidden image to carrier image
             sliced_pixel_coords = itertools.islice(random_pixel_coords, len(compressed_hidden_img))
-
-
 
             # TODO: Save the position sequences to a txt file
             with open('position_sequences.txt', 'w') as f:
@@ -199,15 +243,16 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
             # Save the stego-image
             cv2.imwrite('stego_image.png', carrier_img)
+
+            print("Successfully embedded the hidden image")
         else:
-            print("The image is neither 8-bit grayscale nor 24-bit RGB.")
+            print("The carrier image is neither 8-bit grayscale nor 24-bit RGB.")
             raise ValueError("The image is neither 8-bit grayscale nor 24-bit RGB.")
     else:
-        print("The image could not be read.")
+        print("\nThe image could not be read.")
 
 
 def extract(stego_img_path, position_sequences_path, secret_key):
-
     # Step 1:
     # Load the stego image
     stego_img = cv2.imread(stego_img_path, cv2.IMREAD_COLOR)
@@ -241,7 +286,7 @@ def extract(stego_img_path, position_sequences_path, secret_key):
                 len(stego_img.shape) == 3 and np.all(stego_img[:, :, 0] == stego_img[:, :, 1]) and np.all(
             stego_img[:, :, 0] == stego_img[:, :, 2])):
 
-            print("The image is 8-bit grayscale.")
+            print("The carrier image is 8-bit grayscale.")
 
             stego_img = cv2.imread(stego_img_path, cv2.IMREAD_GRAYSCALE)
 
@@ -263,7 +308,6 @@ def extract(stego_img_path, position_sequences_path, secret_key):
 
             print("Decompressed Hidden Image - Total Pixel Size - ", len(decompressed_hidden_img))
 
-
             # TODO: Decrypt the decompressed hidden image using AES-128
             decrypted_img, decrypted_shape = decrypt_image(decompressed_hidden_img, (rows, cols), secret_key)
 
@@ -272,10 +316,11 @@ def extract(stego_img_path, position_sequences_path, secret_key):
             # TODO: Save the hidden image in the root directory of the project
             cv2.imwrite('hidden_image.png', decrypted_img)
 
+            print("Successfully extracted the hidden image")
 
         elif len(stego_img.shape) == 3:
 
-            print("The image is 24-bit RGB.")
+            print("The carrier image is 24-bit RGB.")
 
             compressed_img_bin = ''
             for pos in itertools.islice(position_sequences, np.prod(compressed_img_length)):
@@ -302,9 +347,11 @@ def extract(stego_img_path, position_sequences_path, secret_key):
             # TODO: Save the hidden image in the root directory of the project
             cv2.imwrite('hidden_image.png', decrypted_img)
 
+            print("Successfully extracted the hidden image")
+
         else:
 
-            print("The image is neither 8-bit grayscale nor 24-bit RGB.")
+            print("The carrier image is neither 8-bit grayscale nor 24-bit RGB.")
 
     else:
 
