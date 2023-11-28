@@ -253,6 +253,8 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
 
 def extract(stego_img_path, position_sequences_path, secret_key):
+    print("====================== Extraction Process ======================")
+
     # Step 1:
     # Load the stego image
     stego_img = cv2.imread(stego_img_path, cv2.IMREAD_COLOR)
