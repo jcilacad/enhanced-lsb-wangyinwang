@@ -1,3 +1,4 @@
+import math
 import random
 import itertools
 
@@ -16,6 +17,15 @@ def adjust_key_length(key):
     elif len(key) > 16:
         key = key[:16]
     return key
+
+
+def closest_factors(n):
+    factor1 = int(math.sqrt(n))
+    while factor1 > 0:
+        factor2 = n // factor1
+        if factor1 * factor2 == n:
+            return factor1, factor2
+        factor1 -= 1
 
 
 def encrypt_image(img, key):
@@ -119,10 +129,18 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     # FIXME: Encrypt the hidden image
     encrypted_hidden_img, original_shape = encrypt_image(hidden_img, secret_key)
 
+    # Save the encrypted image
+    cv2.imwrite('encrypted_image.png', encrypted_hidden_img
+                .reshape(closest_factors(len(encrypted_hidden_img))))
+
     print("Encrypted Hidden Image - Total Pixel Size - ", len(encrypted_hidden_img))
 
     # FIXME: Compress the encrypted image using LZW Compression
     compressed_hidden_img, original_shape = lzw_compress((encrypted_hidden_img, original_shape))
+
+    # Save the stego-image
+    cv2.imwrite('compressed_image.png', compressed_hidden_img
+                .reshape(closest_factors(len(compressed_hidden_img))))
 
     print("Compressed Hidden Image - Total Pixel Size - ", len(compressed_hidden_img))
 
@@ -149,7 +167,7 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
             print("The carrier image is 8-bit grayscale.")
 
-            # Get the dimensions of the image
+            carrier_img = cv2.imread(carrier_img_path, cv2.IMREAD_GRAYSCALE)
 
             # Calculate the total number of bits
             total_bits = carrier_img.shape[0] * carrier_img.shape[1] * 8
@@ -180,9 +198,26 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
                 for pos in sliced_pixel_coords:
                     f.write(f'{pos[0]} {pos[1]}\n')
 
-            for bit, pos in zip(compressed_hidden_img_binary,
-                                itertools.islice(random_pixel_coords, len(compressed_hidden_img_binary))):
+            # Embed the hidden image to the carrier image based on the randomized pixel selection
+            for bit, pos in zip(compressed_hidden_img_binary, itertools.islice(random_pixel_coords,
+                                                                               len(compressed_hidden_img_binary))):
+                # Save the original value
+                original = carrier_img[pos]
+
+                # Perform the embedding
                 carrier_img[pos] = (carrier_img[pos] & ~1) | bit
+
+                # Convert to binary strings
+                original_bin = format(original, "08b")
+                modified_bin = format(carrier_img[pos], "08b")
+
+                # Compare the original and modified binary strings and color the changed bit
+                colored_bin = "".join(
+                    [f'\033[31m{modified_bin[i]}\033[0m' if original_bin[i] != modified_bin[i] else modified_bin[i] for
+                     i in range(8)])
+
+                # Print the before and after
+                print(f'{original_bin} -> {colored_bin}')
 
             # Save the stego-image
             cv2.imwrite('stego_image.png', carrier_img)
@@ -239,7 +274,24 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
                 blue = int(''.join(map(str, blue_bits)), 2)
                 green = int(''.join(map(str, green_bits)), 2)
                 pos = random_pixel_coords[i // 8]
+
+                # Save the original value
+                original = carrier_img[pos]
+
+                # Perform the embedding
                 carrier_img[pos] = (carrier_img[pos] & np.array([~7, ~3, ~7])) | np.array([red, blue, green])
+
+                # Convert to binary strings
+                original_bin = ''.join(format(val, "08b") for val in original)
+                modified_bin = ''.join(format(val, "08b") for val in carrier_img[pos])
+
+                # Compare the original and modified binary strings and color the changed bit
+                colored_bin = "".join(
+                    [f'\033[31m{modified_bin[i]}\033[0m' if original_bin[i] != modified_bin[i] else modified_bin[i] for
+                     i in range(len(original_bin))])
+
+                # Print the before and after
+                print(f'{original_bin} -> {colored_bin}')
 
             # Save the stego-image
             cv2.imwrite('stego_image.png', carrier_img)
