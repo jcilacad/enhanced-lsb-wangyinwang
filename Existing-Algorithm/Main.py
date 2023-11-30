@@ -19,8 +19,11 @@ def embed(carrier_img_path, hidden_img_path):
     # Total number of bits of hidden image
     hidden_img_total_bits = (hidden_img.shape[0] * hidden_img.shape[1]) * 8
 
+    # Total number of bits to embed in carrer image
+    total_bits_to_embed = (carrier_img.shape[0] * carrier_img.shape[1]) * 1
+
     # Total Number of Bits Available in the Carrier Image
-    available_bits = (carrier_img.shape[0] * carrier_img.shape[1]) - hidden_img_total_bits
+    available_bits = total_bits_to_embed - hidden_img_total_bits
 
     # Step 2:
     # Convert the hidden image to a binary stream
@@ -78,9 +81,13 @@ def embed(carrier_img_path, hidden_img_path):
 
     print(f"Total Number of Bits in the Carrier Image - {total_bits}")
 
+    print(f"Total Number of Bits that we can embed in the Carrier Image - {available_bits}")
+
     print(f"Total Number of Bits in the Hidden Image - {hidden_img_total_bits}")
 
-    print(f"Total Number of Bits Available in the Carrier Image - {available_bits}")
+    print(f"Total Number of Bits that we can embed in the Carrier Image - {total_bits_to_embed}")
+
+    print(f"Total Number of Bits that we can embed in the Carrier Image - {available_bits}")
 
     # Save the stego-image
     cv2.imwrite('stego_image.png', carrier_img)
