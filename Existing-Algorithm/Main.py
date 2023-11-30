@@ -65,24 +65,28 @@ def embed(carrier_img_path, hidden_img_path):
              range(8)])
 
         # Print the before and after
-        print(f'{original_bin} -> {colored_bin}')
-
-    print(f"Total Number of Bits in the Carrier Image - {total_bits}")
-
-    print(f"Total Number of Bits in the Hidden Image - {hidden_img_total_bits}")
+        print(f'{original_bin} -> {colored_bin} at pixel - {pos}')
 
     print("------------------------------------------------------------------------")
+    print("\t\tEmbedding Process")
+    print("------------------------------------------------------------------------")
+    print("The carrier image is 8-bit grayscale.")
     print("1 pixel is equal to 8 bits")
     print("In 8 bits only the least significant bit is used")
     print("Available Total Number of Bits = (height * width) - total number bits of hidden image")
     print("------------------------------------------------------------------------")
+
+    print(f"Total Number of Bits in the Carrier Image - {total_bits}")
+
+    print(f"Total Number of Bits in the Hidden Image - {hidden_img_total_bits}")
 
     print(f"Total Number of Bits Available in the Carrier Image - {available_bits}")
 
     # Save the stego-image
     cv2.imwrite('stego_image.png', carrier_img)
 
-    print("Successfully embedded hidden image")
+    print("\nSuccessfully embedded hidden image")
+    print("------------------------------------------------------------------------")
 
 
 def extract(stego_img_path, position_sequences_path):
