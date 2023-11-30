@@ -237,8 +237,6 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
         elif len(carrier_img.shape) == 3:
 
-            print("The carrier image is 24-bit RGB.")
-
             # Get the dimensions of the image
             height, width, _ = carrier_img.shape
 
@@ -250,16 +248,6 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
             # Total Number of Bits Available in the Carrier Image
             available_bits = (width * height * 8) - hidden_img_total_bits
-
-            print(f"Total Number of Bits in the Carrier Image - {total_bits}.")
-
-            print(f"Total Number of Bits in the Hidden Image - {hidden_img_total_bits}")
-
-            print(f"Total Number of Bits Available in the Carrier Image - {available_bits}")
-
-            print(f"Carrier Image Total Number of Bits - {total_bits}")
-
-            print(f"Hidden Image Total Number of Bits - {len(compressed_hidden_img) * 8}")
 
             # Divide the hidden binary length to 8 for rgb image that has 8 bits per pixel
             compressed_hidden_img_binary = [bin(b)[2:].zfill(8) for b in compressed_hidden_img]
@@ -308,10 +296,29 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
                 # Print the before and after
                 print(f'{original_bin} -> {colored_bin} at pixel {pos}')
+
+            print("------------------------------------------------------------------------")
+            print("\t\tEmbedding Process")
+            print("------------------------------------------------------------------------")
+            print("The carrier image is 24-bit RGB")
+            print("1 pixel is equal to 24 bits")
+            print("In a 24-bit image, only 8 bits are used using the 3-2-3 technique")
+            print("Available Total Number of Bits = (height * width * 8) - total number bits of hidden image")
+            print("------------------------------------------------------------------------")
+
+            print(f"Total Number of Bits in the Carrier Image - {total_bits}")
+
+            print(f"Total Number of Bits in the Hidden Image - {hidden_img_total_bits}")
+
+            print(f"Total Number of Bits Available in the Carrier Image - {available_bits}")
+
             # Save the stego-image
             cv2.imwrite('stego_image.png', carrier_img)
 
-            print("Successfully embedded the hidden image")
+            print("\nSuccessfully embedded the hidden image")
+
+            print("------------------------------------------------------------------------")
+
         else:
             print("The carrier image is neither 8-bit grayscale nor 24-bit RGB.")
             raise ValueError("The image is neither 8-bit grayscale nor 24-bit RGB.")
