@@ -174,8 +174,11 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
             # Total number of bits of hidden image
             hidden_img_total_bits = len(compressed_hidden_img) * 8
 
+            # Total number of bits to embed in carrer image
+            total_bits_to_embed = (carrier_img.shape[0] * carrier_img.shape[1]) * 1
+
             # Total Number of Bits Available in the Carrier Image
-            available_bits = (carrier_img.shape[0] * carrier_img.shape[1]) - hidden_img_total_bits
+            available_bits = total_bits_to_embed - hidden_img_total_bits
 
 
             # Pixels to embed from hidden image to carrier image
@@ -224,9 +227,11 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
             print(f"Total Number of Bits in the Carrier Image - {total_bits}")
 
+            print(f"Total Number of Bits that we can embed in the Carrier Image - {total_bits_to_embed}")
+
             print(f"Total Number of Bits in the Hidden Image - {hidden_img_total_bits}")
 
-            print(f"Total Number of Bits Available in the Carrier Image - {available_bits}")
+            print(f"Total Number of Bits free to embed in Carrier Image - {available_bits}")
 
             # Save the stego-image
             cv2.imwrite('stego_image.png', carrier_img)
@@ -243,11 +248,14 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
             # Calculate the total number of bits
             total_bits = width * height * 24
 
+            # Total number of bits to embed in carrer image
+            total_bits_to_embed = (width * height) * 8
+
             # Total number of bits of hidden image
             hidden_img_total_bits = len(compressed_hidden_img) * 8
 
             # Total Number of Bits Available in the Carrier Image
-            available_bits = (width * height * 8) - hidden_img_total_bits
+            available_bits = total_bits_to_embed - hidden_img_total_bits
 
             # Divide the hidden binary length to 8 for rgb image that has 8 bits per pixel
             compressed_hidden_img_binary = [bin(b)[2:].zfill(8) for b in compressed_hidden_img]
@@ -308,9 +316,11 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
 
             print(f"Total Number of Bits in the Carrier Image - {total_bits}")
 
+            print(f"Total Number of Bits that we can embed in the Carrier Image - {total_bits_to_embed}")
+
             print(f"Total Number of Bits in the Hidden Image - {hidden_img_total_bits}")
 
-            print(f"Total Number of Bits Available in the Carrier Image - {available_bits}")
+            print(f"Total Number of Bits free to embed in Carrier Image - {available_bits}")
 
             # Save the stego-image
             cv2.imwrite('stego_image.png', carrier_img)

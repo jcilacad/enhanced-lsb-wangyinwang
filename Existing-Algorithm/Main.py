@@ -50,6 +50,7 @@ def embed(carrier_img_path, hidden_img_path):
             f.write(f'{pos[0]} {pos[1]}\n')
 
     # Step 6:
+    # SOP 2:
     # Embed the hidden image into the carrier image
     for bit, pos in zip(hidden_img_binary, itertools.islice(random_pixel_coords, len(hidden_img_binary))):
         # Save the original value
@@ -81,13 +82,11 @@ def embed(carrier_img_path, hidden_img_path):
 
     print(f"Total Number of Bits in the Carrier Image - {total_bits}")
 
-    print(f"Total Number of Bits that we can embed in the Carrier Image - {available_bits}")
+    print(f"Total Number of Bits that we can embed in the Carrier Image - {total_bits_to_embed}")
 
     print(f"Total Number of Bits in the Hidden Image - {hidden_img_total_bits}")
 
-    print(f"Total Number of Bits that we can embed in the Carrier Image - {total_bits_to_embed}")
-
-    print(f"Total Number of Bits that we can embed in the Carrier Image - {available_bits}")
+    print(f"Total Number of Bits free to embed in Carrier Image - {available_bits}")
 
     # Save the stego-image
     cv2.imwrite('stego_image.png', carrier_img)
@@ -112,6 +111,7 @@ def extract(stego_img_path, position_sequences_path):
 
     # Step 3:
     # Extract the binary digital stream of the hidden image
+    # SOP 3
     hidden_img_binary = np.array([stego_img[pos] & 1 for pos in position_sequences])
 
     # Ensure that the length of hidden_img_binary is a multiple of 8
