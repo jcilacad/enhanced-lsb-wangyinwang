@@ -138,7 +138,7 @@ def embed(carrier_img_path, hidden_img_path, secret_key):
     # FIXME: Compress the encrypted image using LZW Compression
     compressed_hidden_img, original_shape = lzw_compress((encrypted_hidden_img, original_shape))
 
-    # Save the stego-image
+    # Save the compressed image
     cv2.imwrite('compressed_image.png', compressed_hidden_img
                 .reshape(closest_factors(len(compressed_hidden_img))))
 
