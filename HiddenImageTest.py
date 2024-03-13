@@ -44,6 +44,11 @@
 # (Negative) Difference = -2.0 == Carrier Image Dimensions - ( 1025 ,  1054 ) === Hidden Image Dimension - ( 371 ,  364 )
 # (Negative) Difference = -8.0 == Carrier Image Dimensions - ( 1025 ,  1080 ) === Hidden Image Dimension - ( 353 ,  392 )
 
+# (Negative) Difference = -7.0 == Carrier Image Dimensions - ( 1183 ,  1055 ) === Hidden Image Dimension - ( 399 ,  391 )
+# (Negative) Difference = -8.0 == Carrier Image Dimensions - ( 1194 ,  1056 ) === Hidden Image Dimension - ( 397 ,  397 )
+# (Negative) Difference = -9.0 == Carrier Image Dimensions - ( 1199 ,  1033 ) === Hidden Image Dimension - ( 398 ,  389 )
+# (Negative) Difference = -10.0 == Carrier Image Dimensions - ( 1190 ,  1033 ) === Hidden Image Dimension - ( 394 ,  390 )
+
 # TODO: Mid Resolution
 
 # for x in range(2048, 2200):
@@ -85,11 +90,11 @@
 # (Negative) Difference = -8.0 == Carrier Image Dimensions - ( 4103 ,  4192 ) === Hidden Image Dimension - ( 1421 ,  1513 )
 
 
-for x in range(4096, 4200):
-    for y in range(4096, 4200):
+for x in range(1024, 1200):
+    for y in range(1024, 1200):
         quotient = (x * y * 8) / 8
-        for a in range(1400, 1600):
-            for b in range(1400, 1600):
+        for a in range(350, 400):
+            for b in range(350, 400):
 
                 # Low Resolution
                 # quotient = 1048576
