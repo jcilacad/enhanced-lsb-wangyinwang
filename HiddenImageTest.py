@@ -23,6 +23,7 @@
 
 # ===========================================================================================================================================
 
+
 for x in range(200, 300):
     for y in range(200, 300):
         quotient = (x * y * 8) / 8
@@ -30,12 +31,21 @@ for x in range(200, 300):
             for b in range(50, 100):
                 difference = quotient - (a * b * 8)
                 if difference == 0:
-                    print("(Equals) Difference = ", difference, " == Carrier Image Dimensions - (", x, ", ", y,
-                          ") === Hidden Image Dimension - (", a, ", ", b, ")")
+                    print("\033[92m(Equals) Difference =\033[0m", difference,
+                          "\033[92m== Carrier Image Dimensions -\033[0m (", x, ", ", y,
+                          ") \033[92m=== Hidden Image Dimension -\033[0m (", a, ", ", b, ")")
                 elif 11 > difference > 0:
-                    print("(Positive) Difference = ", difference, " == Carrier Image Dimensions - (", x, ", ", y,
-                          ") === Hidden Image Dimension - (", a, ", ", b, ")")
+                    print("\033[91m(Positive) Difference =\033[0m", difference,
+                          "\033[91m== Carrier Image Dimensions -\033[0m (", x, ", ", y,
+                          ") \033[91m=== Hidden Image Dimension -\033[0m (", a, ", ", b, ")")
                 elif -11 < difference < 0:
-                    print("(Negative) Difference = ", difference, " == Carrier Image Dimensions - (", x, ", ", y,
-                          ") === Hidden Image Dimension - (", a, ", ", b, ")")
-print("Done")
+                    print("\033[94m(Negative) Difference =\033[0m", difference,
+                          "\033[94m== Carrier Image Dimensions -\033[0m (", x, ", ", y,
+                          ") \033[94m=== Hidden Image Dimension -\033[0m (", a, ", ", b, ")")
+
+
+print("\n\nDone")
+print("\033[92mGreen - (Zero)\033[0m")
+print("\033[91mRed - (Positive)\033[0m")
+print("\033[94mBlue - (Negative)\033[0m")
+
